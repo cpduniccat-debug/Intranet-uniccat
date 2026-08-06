@@ -1,0 +1,932 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  Users, 
+  UserPlus, 
+  ShieldCheck, 
+  Search, 
+  Filter, 
+  Edit, 
+  Trash2, 
+  Check, 
+  X, 
+  Activity, 
+  Database, 
+  Key, 
+  CheckCircle2, 
+  AlertCircle, 
+  Building, 
+  Phone, 
+  Mail, 
+  Calendar, 
+  BadgeCheck, 
+  Eye, 
+  Power,
+  RefreshCw,
+  Sparkles,
+  Lock,
+  Layers,
+  LifeBuoy
+} from 'lucide-react';
+import { UserProfile, Role, Department, AuditLog } from '../../types';
+import { getUsers, saveUser, deleteUser, getAuditLogs, addAuditLog } from '../../lib/storage';
+import { isSupabaseConfigured } from '../../lib/supabaseClient';
+import { TicketsView } from './TicketsView';
+
+interface AdminViewProps {
+  currentUser: UserProfile;
+  onOpenSqlModal: () => void;
+}
+
+const ROLES: Role[] = [
+  'Administrador',
+  'RH',
+  'Financeiro',
+  'Comercial',
+  'Recepção',
+  'Médico',
+  'Coordenador',
+  'Gestor',
+  'Funcionário'
+];
+
+const DEPARTMENTS: Department[] = [
+  'Diretoria',
+  'Medicina Ocupacional',
+  'Segurança do Trabalho',
+  'Recursos Humanos',
+  'Financeiro & Administrativo',
+  'Comercial',
+  'Recepção & Atendimento',
+  'Tecnologia da Informação',
+  'Qualidade & Processos'
+];
+
+const PRESET_AVATARS = [
+  'https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=250&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=250&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=250&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=250&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=250&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=250&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=250&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=250&auto=format&fit=crop&q=80'
+];
+
+export const AdminView: React.FC<AdminViewProps> = ({ currentUser, onOpenSqlModal }) => {
+  const [activeTab, setActiveTab] = useState<'users' | 'audit' | 'supabase' | 'glpi'>('users');
+  const [users, setUsers] = useState<UserProfile[]>(() => getUsers());
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => getAuditLogs());
+
+  // Search & Filters
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
+  const [selectedRole, setSelectedRole] = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<'all' | 'active' | 'inactive'>('all');
+
+  // Modal State for Create / Edit User
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
+
+  // Form Fields
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    role: 'Funcionário' as Role,
+    department: 'Medicina Ocupacional' as Department,
+    phone: '(11) 3300-1000',
+    extension: '100',
+    mobile: '(11) 98888-0000',
+    photoUrl: PRESET_AVATARS[0],
+    location: 'Sede Principal - SP',
+    birthDate: '1990-05-15',
+    hireDate: new Date().toISOString().split('T')[0],
+    bio: '',
+    active: true
+  });
+
+  const [formError, setFormError] = useState('');
+  const [formSuccess, setFormSuccess] = useState('');
+
+  // Delete User Confirmation
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+
+  const loadData = () => {
+    setUsers(getUsers());
+    setAuditLogs(getAuditLogs());
+  };
+
+  useEffect(() => {
+    loadData();
+    const handleStorageUpdate = () => loadData();
+    window.addEventListener('uniccat_storage_update', handleStorageUpdate);
+    return () => window.removeEventListener('uniccat_storage_update', handleStorageUpdate);
+  }, []);
+
+  const openCreateModal = () => {
+    setEditingUser(null);
+    setFormData({
+      name: '',
+      email: '',
+      role: 'Funcionário',
+      department: 'Medicina Ocupacional',
+      phone: '(11) 3300-1000',
+      extension: Math.floor(100 + Math.random() * 800).toString(),
+      mobile: '(11) 9' + Math.floor(10000000 + Math.random() * 90000000),
+      photoUrl: PRESET_AVATARS[Math.floor(Math.random() * PRESET_AVATARS.length)],
+      location: 'Sede Principal - SP',
+      birthDate: '1992-06-20',
+      hireDate: new Date().toISOString().split('T')[0],
+      bio: 'Novo colaborador integrado à equipe UNICCAT.',
+      active: true
+    });
+    setFormError('');
+    setFormSuccess('');
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (user: UserProfile) => {
+    setEditingUser(user);
+    setFormData({
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      department: user.department,
+      phone: user.phone || '(11) 3300-1000',
+      extension: user.extension || '100',
+      mobile: user.mobile || '(11) 98888-0000',
+      photoUrl: user.photoUrl,
+      location: user.location || 'Sede Principal - SP',
+      birthDate: user.birthDate || '1990-01-01',
+      hireDate: user.hireDate || '2023-01-01',
+      bio: user.bio || '',
+      active: user.active
+    });
+    setFormError('');
+    setFormSuccess('');
+    setIsModalOpen(true);
+  };
+
+  const handleSaveUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError('');
+    setFormSuccess('');
+
+    if (!formData.name.trim()) {
+      setFormError('Por favor informe o nome completo do usuário.');
+      return;
+    }
+
+    if (!formData.email.trim() || !formData.email.includes('@')) {
+      setFormError('Por favor informe um e-mail corporativo válido.');
+      return;
+    }
+
+    const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
+
+    if (editingUser) {
+      // Update User
+      const updated: UserProfile = {
+        ...editingUser,
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        role: formData.role,
+        department: formData.department,
+        phone: formData.phone,
+        extension: formData.extension,
+        mobile: formData.mobile,
+        photoUrl: formData.photoUrl,
+        location: formData.location,
+        birthDate: formData.birthDate,
+        hireDate: formData.hireDate,
+        bio: formData.bio,
+        active: formData.active
+      };
+      saveUser(updated);
+      addAuditLog(currentUser, 'EDITAR_PERMISSAO', `Perfil de usuário "${updated.name}" (${updated.email}) atualizado pelo administrador.`);
+      setFormSuccess('Usuário atualizado com sucesso!');
+    } else {
+      // Check duplicate email
+      const existing = users.find(u => u.email.toLowerCase() === formData.email.trim().toLowerCase());
+      if (existing) {
+        setFormError('Já existe um usuário cadastrado com este e-mail.');
+        return;
+      }
+
+      // Create New User
+      const newUser: UserProfile = {
+        id: 'u-' + Date.now(),
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        role: formData.role,
+        department: formData.department,
+        phone: formData.phone,
+        extension: formData.extension,
+        mobile: formData.mobile,
+        photoUrl: formData.photoUrl,
+        location: formData.location,
+        birthDate: formData.birthDate,
+        hireDate: formData.hireDate,
+        bio: formData.bio,
+        active: formData.active,
+        createdAt: nowStr
+      };
+      saveUser(newUser);
+      addAuditLog(currentUser, 'EDITAR_PERMISSAO', `Novo usuário "${newUser.name}" (${newUser.role} - ${newUser.department}) criado com sucesso.`);
+      setFormSuccess('Novo usuário criado e ativado com sucesso!');
+    }
+
+    setTimeout(() => {
+      setIsModalOpen(false);
+      loadData();
+    }, 1200);
+  };
+
+  const handleToggleUserActive = (user: UserProfile) => {
+    const updated = { ...user, active: !user.active };
+    saveUser(updated);
+    addAuditLog(currentUser, 'EDITAR_PERMISSAO', `Status do usuário "${user.name}" alterado para ${updated.active ? 'Ativo' : 'Inativo'}.`);
+    loadData();
+  };
+
+  const handleDeleteUserConfirm = (userId: string) => {
+    const userToDelete = users.find(u => u.id === userId);
+    if (userToDelete) {
+      deleteUser(userId);
+      addAuditLog(currentUser, 'EXCLUIR_REGISTRO', `Usuário "${userToDelete.name}" (${userToDelete.email}) foi excluído pelo administrador.`);
+      setDeletingUserId(null);
+      loadData();
+    }
+  };
+
+  // Filtered Users
+  const filteredUsers = users.filter(u => {
+    if (selectedDepartment !== 'all' && u.department !== selectedDepartment) return false;
+    if (selectedRole !== 'all' && u.role !== selectedRole) return false;
+    if (selectedStatus === 'active' && !u.active) return false;
+    if (selectedStatus === 'inactive' && u.active) return false;
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      return (
+        u.name.toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q) ||
+        u.role.toLowerCase().includes(q) ||
+        u.department.toLowerCase().includes(q) ||
+        u.extension.includes(q)
+      );
+    }
+
+    return true;
+  });
+
+  const totalUsers = users.length;
+  const activeCount = users.filter(u => u.active).length;
+  const adminCount = users.filter(u => u.role === 'Administrador').length;
+
+  return (
+    <div className="max-w-7xl mx-auto space-y-6">
+      
+      {/* Header Banner */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 rounded-xl">
+            <ShieldCheck className="w-7 h-7" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-bold text-slate-900 dark:text-white">Painel Administrativo & Gestão de Usuários</h1>
+              <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-extrabold text-[10px] rounded-full uppercase">
+                Acesso Master
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Cadastre e gerencie colaboradores, atribua permissões de departamento e consulte logs de segurança.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={openCreateModal}
+            className="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow-sm transition"
+          >
+            <UserPlus className="w-4 h-4" /> Criar Novo Usuário
+          </button>
+
+          <button
+            onClick={onOpenSqlModal}
+            className="px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs rounded-xl flex items-center gap-1.5 transition"
+            title="Ver e Copiar Script SQL do Banco Supabase"
+          >
+            <Database className="w-4 h-4 text-emerald-600" /> Script SQL Supabase
+          </button>
+        </div>
+      </div>
+
+      {/* Metrics Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Total de Colaboradores</p>
+            <p className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">{totalUsers}</p>
+          </div>
+          <div className="p-2.5 bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 rounded-xl">
+            <Users className="w-6 h-6" />
+          </div>
+        </div>
+
+        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Contas Ativas</p>
+            <p className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">{activeCount}</p>
+          </div>
+          <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 rounded-xl">
+            <CheckCircle2 className="w-6 h-6" />
+          </div>
+        </div>
+
+        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Administradores</p>
+            <p className="text-2xl font-extrabold text-blue-600 dark:text-blue-400 mt-1">{adminCount}</p>
+          </div>
+          <div className="p-2.5 bg-blue-50 dark:bg-blue-950 text-blue-600 rounded-xl">
+            <ShieldCheck className="w-6 h-6" />
+          </div>
+        </div>
+
+        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Conexão Supabase</p>
+            <p className="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 mt-1.5 flex items-center gap-1">
+              <Check className="w-3.5 h-3.5" /> {isSupabaseConfigured() ? 'Conectado (Realtime)' : 'Modo Mock / Híbrido'}
+            </p>
+          </div>
+          <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950 text-emerald-600 rounded-xl">
+            <Database className="w-6 h-6" />
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content Tabs */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
+        
+        {/* Navigation Bar */}
+        <div className="p-4 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setActiveTab('users')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+                activeTab === 'users'
+                  ? 'bg-blue-700 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'
+              }`}
+            >
+              <Users className="w-4 h-4" /> Gestão de Colaboradores & Acessos
+            </button>
+
+            <button
+              onClick={() => setActiveTab('audit')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+                activeTab === 'audit'
+                  ? 'bg-blue-700 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'
+              }`}
+            >
+              <Activity className="w-4 h-4" /> Logs de Auditoria do Sistema
+            </button>
+
+            <button
+              onClick={() => setActiveTab('supabase')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+                activeTab === 'supabase'
+                  ? 'bg-blue-700 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'
+              }`}
+            >
+              <Layers className="w-4 h-4" /> Status Supabase & RLS
+            </button>
+
+            <button
+              onClick={() => setActiveTab('glpi')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+                activeTab === 'glpi'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100'
+              }`}
+            >
+              <LifeBuoy className="w-4 h-4" /> Painel GLPI Atendimentos TI
+            </button>
+          </div>
+
+          <button
+            onClick={loadData}
+            className="p-2 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition"
+            title="Atualizar lista"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* TAB 1: USER MANAGEMENT */}
+        {activeTab === 'users' && (
+          <div className="p-6 space-y-6">
+            
+            {/* Filter controls */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-slate-50 dark:bg-slate-950/60 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+              
+              {/* Search */}
+              <div className="relative">
+                <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Buscar por nome, e-mail, ramal..."
+                  className="w-full pl-9 pr-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs"
+                />
+              </div>
+
+              {/* Department */}
+              <select
+                value={selectedDepartment}
+                onChange={e => setSelectedDepartment(e.target.value)}
+                className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300"
+              >
+                <option value="all">Todos os Departamentos</option>
+                {DEPARTMENTS.map(dept => (
+                  <option key={dept} value={dept}>{dept}</option>
+                ))}
+              </select>
+
+              {/* Role */}
+              <select
+                value={selectedRole}
+                onChange={e => setSelectedRole(e.target.value)}
+                className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300"
+              >
+                <option value="all">Todos os Cargos</option>
+                {ROLES.map(role => (
+                  <option key={role} value={role}>{role}</option>
+                ))}
+              </select>
+
+              {/* Status */}
+              <select
+                value={selectedStatus}
+                onChange={e => setSelectedStatus(e.target.value as any)}
+                className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300"
+              >
+                <option value="all">Status: Todos</option>
+                <option value="active">Somente Ativos</option>
+                <option value="inactive">Somente Inativos</option>
+              </select>
+            </div>
+
+            {/* User List Table */}
+            <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-100 dark:bg-slate-950 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
+                  <tr>
+                    <th className="p-3.5">Colaborador</th>
+                    <th className="p-3.5">Cargo / Perfil</th>
+                    <th className="p-3.5">Departamento</th>
+                    <th className="p-3.5">Ramal / Contato</th>
+                    <th className="p-3.5">Status</th>
+                    <th className="p-3.5 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {filteredUsers.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="p-8 text-center text-slate-400">
+                        Nenhum usuário encontrado com os filtros selecionados.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredUsers.map(user => (
+                      <tr key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition">
+                        
+                        {/* User Photo & Name */}
+                        <td className="p-3.5">
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={user.photoUrl}
+                              alt={user.name}
+                              className="w-10 h-10 rounded-full object-cover ring-2 ring-slate-200 dark:ring-slate-700"
+                            />
+                            <div>
+                              <p className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                                <span>{user.name}</span>
+                                {user.role === 'Administrador' && (
+                                  <BadgeCheck className="w-4 h-4 text-blue-600" title="Administrador Master" />
+                                )}
+                              </p>
+                              <p className="text-[11px] text-slate-500">{user.email}</p>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Role */}
+                        <td className="p-3.5 font-semibold text-slate-700 dark:text-slate-300">
+                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                            user.role === 'Administrador' 
+                              ? 'bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-200' 
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                          }`}>
+                            {user.role}
+                          </span>
+                        </td>
+
+                        {/* Department */}
+                        <td className="p-3.5 text-slate-600 dark:text-slate-400 font-medium">
+                          {user.department}
+                        </td>
+
+                        {/* Extension / Mobile */}
+                        <td className="p-3.5">
+                          <p className="font-bold text-emerald-600 dark:text-emerald-400">Ramal: {user.extension}</p>
+                          <p className="text-[10px] text-slate-400">{user.mobile}</p>
+                        </td>
+
+                        {/* Status Toggle */}
+                        <td className="p-3.5">
+                          <button
+                            onClick={() => handleToggleUserActive(user)}
+                            className={`px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 transition ${
+                              user.active 
+                                ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300' 
+                                : 'bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300'
+                            }`}
+                          >
+                            <Power className="w-3 h-3" />
+                            <span>{user.active ? 'Ativo' : 'Inativo'}</span>
+                          </button>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="p-3.5 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => openEditModal(user)}
+                              className="p-1.5 hover:bg-blue-50 dark:hover:bg-blue-950 text-blue-600 rounded-lg transition"
+                              title="Editar Perfil de Usuário"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+
+                            {user.id !== currentUser.id && (
+                              <button
+                                onClick={() => setDeletingUserId(user.id)}
+                                className="p-1.5 hover:bg-rose-50 dark:hover:bg-rose-950 text-rose-600 rounded-lg transition"
+                                title="Excluir Colaborador"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+        )}
+
+        {/* TAB 2: AUDIT LOGS */}
+        {activeTab === 'audit' && (
+          <div className="p-6 space-y-4">
+            <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+              <Activity className="w-4 h-4 text-blue-600" />
+              <span>Registro Contínuo de Auditoria e Segurança (Supabase RLS)</span>
+            </h3>
+
+            <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-100 dark:bg-slate-950 text-slate-500 font-bold uppercase border-b border-slate-200 dark:border-slate-800">
+                  <tr>
+                    <th className="p-3">Data / Hora</th>
+                    <th className="p-3">Usuário</th>
+                    <th className="p-3">Ação</th>
+                    <th className="p-3">Detalhes</th>
+                    <th className="p-3">IP Origem</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-mono">
+                  {auditLogs.map(log => (
+                    <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                      <td className="p-3 text-slate-500">{log.timestamp}</td>
+                      <td className="p-3 font-semibold text-slate-900 dark:text-white">{log.userName}</td>
+                      <td className="p-3">
+                        <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 font-bold rounded text-[10px]">
+                          {log.action}
+                        </span>
+                      </td>
+                      <td className="p-3 text-slate-700 dark:text-slate-300">{log.details}</td>
+                      <td className="p-3 text-slate-400">{log.ipAddress}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: SUPABASE CONFIG */}
+        {activeTab === 'supabase' && (
+          <div className="p-6 space-y-6">
+            <div className="p-5 bg-blue-50/50 dark:bg-slate-950 border border-blue-200 dark:border-slate-800 rounded-2xl space-y-3">
+              <div className="flex items-center gap-3">
+                <Database className="w-6 h-6 text-emerald-600" />
+                <div>
+                  <h3 className="font-bold text-base text-slate-900 dark:text-white">Arquitetura de Dados Supabase (PostgreSQL & Realtime)</h3>
+                  <p className="text-xs text-slate-500">Todas as tabelas do sistema contam com Row Level Security (RLS) habilitado.</p>
+                </div>
+              </div>
+
+              <div className="p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
+                <p className="font-bold text-slate-800 dark:text-slate-200">Tabelas Estruturadas no Schema:</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <div className="p-2 bg-slate-50 dark:bg-slate-800 rounded font-mono">public.profiles</div>
+                  <div className="p-2 bg-slate-50 dark:bg-slate-800 rounded font-mono">public.announcements</div>
+                  <div className="p-2 bg-slate-50 dark:bg-slate-800 rounded font-mono">public.chat_rooms</div>
+                  <div className="p-2 bg-slate-50 dark:bg-slate-800 rounded font-mono">public.chat_messages</div>
+                  <div className="p-2 bg-slate-50 dark:bg-slate-800 rounded font-mono">public.user_presences</div>
+                  <div className="p-2 bg-slate-50 dark:bg-slate-800 rounded font-mono">public.tickets</div>
+                </div>
+              </div>
+
+              <button
+                onClick={onOpenSqlModal}
+                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow-sm transition"
+              >
+                <Database className="w-4 h-4" /> Visualizar DDL SQL Completo & Políticas RLS
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: GLPI HELPDESK */}
+        {activeTab === 'glpi' && (
+          <div className="p-6">
+            <TicketsView currentUser={currentUser} />
+          </div>
+        )}
+
+      </div>
+
+      {/* CREATE / EDIT USER MODAL */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden p-6 space-y-5 my-8">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b pb-4 border-slate-200 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 text-blue-600 rounded-xl">
+                  <UserPlus className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                    {editingUser ? 'Editar Perfil de Colaborador' : 'Cadastrar Novo Usuário / Colaborador'}
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Insira os dados profissionais, cargo e ramal para acesso à Intranet UNICCAT
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Form Error / Success feedback */}
+            {formError && (
+              <div className="p-3 bg-rose-50 dark:bg-rose-950 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 rounded-xl text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{formError}</span>
+              </div>
+            )}
+
+            {formSuccess && (
+              <div className="p-3 bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 rounded-xl text-xs flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>{formSuccess}</span>
+              </div>
+            )}
+
+            {/* Form Fields */}
+            <form onSubmit={handleSaveUser} className="space-y-4 text-xs">
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Full Name */}
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Nome Completo *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.name}
+                    onChange={e => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Ex: Dra. Mariana Costa"
+                    className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-medium text-slate-900 dark:text-white"
+                  />
+                </div>
+
+                {/* Email */}
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">E-mail Corporativo *</label>
+                  <input
+                    type="email"
+                    required
+                    value={formData.email}
+                    onChange={e => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="mariana.costa@uniccat.com.br"
+                    className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-medium text-slate-900 dark:text-white"
+                  />
+                </div>
+
+                {/* Role / Cargo */}
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Cargo / Função *</label>
+                  <select
+                    value={formData.role}
+                    onChange={e => setFormData({ ...formData, role: e.target.value as Role })}
+                    className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-medium text-slate-900 dark:text-white"
+                  >
+                    {ROLES.map(r => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Department */}
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Departamento UNICCAT *</label>
+                  <select
+                    value={formData.department}
+                    onChange={e => setFormData({ ...formData, department: e.target.value as Department })}
+                    className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-medium text-slate-900 dark:text-white"
+                  >
+                    {DEPARTMENTS.map(d => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Extension (Ramal) */}
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Ramal Telefônico</label>
+                  <input
+                    type="text"
+                    value={formData.extension}
+                    onChange={e => setFormData({ ...formData, extension: e.target.value })}
+                    placeholder="Ex: 104"
+                    className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-medium text-slate-900 dark:text-white"
+                  />
+                </div>
+
+                {/* Mobile */}
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Telefone Celular / WhatsApp</label>
+                  <input
+                    type="text"
+                    value={formData.mobile}
+                    onChange={e => setFormData({ ...formData, mobile: e.target.value })}
+                    placeholder="(11) 98888-7777"
+                    className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-medium text-slate-900 dark:text-white"
+                  />
+                </div>
+
+                {/* Location */}
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Unidade / Localização</label>
+                  <input
+                    type="text"
+                    value={formData.location}
+                    onChange={e => setFormData({ ...formData, location: e.target.value })}
+                    placeholder="Sede São Paulo - SP"
+                    className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-medium text-slate-900 dark:text-white"
+                  />
+                </div>
+
+                {/* Status Toggle */}
+                <div className="flex items-center gap-3 pt-4">
+                  <label className="font-bold text-slate-700 dark:text-slate-300">Status do Acesso:</label>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, active: !formData.active })}
+                    className={`px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 transition ${
+                      formData.active 
+                        ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300' 
+                        : 'bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 border border-rose-300'
+                    }`}
+                  >
+                    <Power className="w-4 h-4" />
+                    <span>{formData.active ? 'Conta Ativa' : 'Conta Inativa'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Photo Avatar Preset Selector */}
+              <div className="pt-2">
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">Avatar / Foto de Perfil</label>
+                <div className="flex items-center gap-2 overflow-x-auto pb-2">
+                  {PRESET_AVATARS.map((url, i) => (
+                    <img
+                      key={i}
+                      src={url}
+                      alt="Avatar"
+                      onClick={() => setFormData({ ...formData, photoUrl: url })}
+                      className={`w-10 h-10 rounded-full object-cover cursor-pointer transition ring-2 ${
+                        formData.photoUrl === url ? 'ring-blue-600 scale-110' : 'ring-transparent hover:opacity-80'
+                      }`}
+                    />
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  value={formData.photoUrl}
+                  onChange={e => setFormData({ ...formData, photoUrl: e.target.value })}
+                  placeholder="Ou insira a URL direta da foto..."
+                  className="w-full mt-1 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+                />
+              </div>
+
+              {/* Bio */}
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Apresentação / Resumo</label>
+                <textarea
+                  rows={2}
+                  value={formData.bio}
+                  onChange={e => setFormData({ ...formData, bio: e.target.value })}
+                  placeholder="Breve descrição da especialidade ou rotina do colaborador..."
+                  className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+                />
+              </div>
+
+              {/* Modal Actions */}
+              <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-200 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold rounded-xl"
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-xl shadow-xs flex items-center gap-1.5 transition"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>{editingUser ? 'Salvar Alterações' : 'Concluir Cadastro'}</span>
+                </button>
+              </div>
+
+            </form>
+
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRM DELETE MODAL */}
+      {deletingUserId && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl p-6 space-y-4">
+            <div className="p-3 bg-rose-50 dark:bg-rose-950 text-rose-600 rounded-xl w-fit">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-bold text-base text-slate-900 dark:text-white">Confirmar Exclusão de Usuário</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Esta ação removerá o colaborador da lista de usuários ativos da Intranet UNICCAT.
+              </p>
+            </div>
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+              <button
+                onClick={() => setDeletingUserId(null)}
+                className="px-4 py-2 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-lg"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => handleDeleteUserConfirm(deletingUserId)}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg shadow-xs"
+              >
+                Excluir Definitivamente
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+};

@@ -1,0 +1,6 @@
+{
+  "name": "Intranet Corporativa UNICCAT",
+  "description": "Intranet Corporativa moderna, segura e integrada para UNICCAT Saúde Ocupacional e Segurança do Trabalho.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
