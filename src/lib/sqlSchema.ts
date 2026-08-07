@@ -234,6 +234,26 @@ CREATE TABLE IF NOT EXISTS public.notification_preferences (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 15. MURAL DE AVISO DE FÉRIAS (PORTAL DO RH)
+CREATE TABLE IF NOT EXISTS public.vacation_notices (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  employee_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+  employee_name TEXT NOT NULL,
+  employee_photo_url TEXT,
+  department TEXT NOT NULL,
+  role TEXT,
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  days_count INT NOT NULL DEFAULT 30,
+  status TEXT NOT NULL DEFAULT 'Programada',
+  substitute_name TEXT,
+  substitute_phone TEXT,
+  notes TEXT,
+  created_by TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+
 -- ==============================================================================
 -- 15. SEGURANÇA & POLÍTICAS RLS (ROW LEVEL SECURITY)
 -- ==============================================================================

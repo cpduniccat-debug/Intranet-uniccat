@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Users, 
   UserPlus, 
@@ -26,7 +26,9 @@ import {
   Sparkles,
   Lock,
   Layers,
-  LifeBuoy
+  LifeBuoy,
+  Camera,
+  Upload
 } from 'lucide-react';
 import { UserProfile, Role, Department, AuditLog } from '../../types';
 import { getUsers, saveUser, deleteUser, getAuditLogs, addAuditLog, syncAllLocalDataToSupabase, getLastSupabaseError } from '../../lib/storage';
@@ -112,6 +114,41 @@ export const AdminView: React.FC<AdminViewProps> = ({ currentUser, onOpenSqlModa
   const [showPassword, setShowPassword] = useState(false);
   const [formError, setFormError] = useState('');
   const [formSuccess, setFormSuccess] = useState('');
+
+  const adminFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Handle JPEG photo upload for Admin Modal (Max 4MB)
+  const handleAdminImageUpload = (file: File) => {
+    setFormError('');
+    setFormSuccess('');
+
+    const fileName = file.name.toLowerCase();
+    const isJpeg = file.type === 'image/jpeg' || file.type === 'image/jpg' || fileName.endsWith('.jpg') || fileName.endsWith('.jpeg');
+
+    if (!isJpeg) {
+      setFormError('Apenas imagens no formato JPEG (.jpg ou .jpeg) são permitidas.');
+      return;
+    }
+
+    const MAX_SIZE_BYTES = 4 * 1024 * 1024; // 4MB
+    if (file.size > MAX_SIZE_BYTES) {
+      const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      setFormError(`A imagem enviada possui ${fileSizeMB} MB. O limite máximo permitido é 4 MB.`);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (reader.result && typeof reader.result === 'string') {
+        setFormData(prev => ({ ...prev, photoUrl: reader.result as string }));
+        setFormSuccess('Foto JPEG do colaborador carregada com sucesso!');
+      }
+    };
+    reader.onerror = () => {
+      setFormError('Erro ao carregar o arquivo de imagem.');
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Delete User Confirmation
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
@@ -1036,29 +1073,68 @@ export const AdminView: React.FC<AdminViewProps> = ({ currentUser, onOpenSqlModa
                 </div>
               </div>
 
-              {/* Photo Avatar Preset Selector */}
-              <div className="pt-2">
-                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">Avatar / Foto de Perfil</label>
-                <div className="flex items-center gap-2 overflow-x-auto pb-2">
-                  {PRESET_AVATARS.map((url, i) => (
-                    <img
-                      key={i}
-                      src={url}
-                      alt="Avatar"
-                      onClick={() => setFormData({ ...formData, photoUrl: url })}
-                      className={`w-10 h-10 rounded-full object-cover cursor-pointer transition ring-2 ${
-                        formData.photoUrl === url ? 'ring-blue-600 scale-110' : 'ring-transparent hover:opacity-80'
-                      }`}
-                    />
-                  ))}
+              {/* Photo Avatar Upload & Preset Selector */}
+              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <Camera className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    <span>Foto de Perfil (JPEG - Máx 4MB)</span>
+                  </label>
+                  <span className="text-[10px] font-bold text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-950 px-2 py-0.5 rounded-full uppercase">
+                    JPEG • Max 4MB
+                  </span>
                 </div>
-                <input
-                  type="text"
-                  value={formData.photoUrl}
-                  onChange={e => setFormData({ ...formData, photoUrl: e.target.value })}
-                  placeholder="Ou insira a URL direta da foto..."
-                  className="w-full mt-1 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
-                />
+
+                <div className="flex items-center gap-3">
+                  <img
+                    src={formData.photoUrl}
+                    alt="Foto do colaborador"
+                    className="w-14 h-14 rounded-full object-cover ring-2 ring-blue-600/40 shrink-0 shadow-xs"
+                  />
+                  <div className="space-y-1">
+                    <input
+                      ref={adminFileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/jpg,.jpg,.jpeg"
+                      className="hidden"
+                      onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (file) handleAdminImageUpload(file);
+                        e.target.value = '';
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => adminFileInputRef.current?.click()}
+                      className="px-3 py-1.5 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 transition"
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>Upload Foto JPEG</span>
+                    </button>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                      Formatos aceitos: <strong>.jpg, .jpeg</strong> (máximo 4MB).
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <span className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1.5">
+                    Ou escolha um avatar pré-definido:
+                  </span>
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                    {PRESET_AVATARS.map((url, i) => (
+                      <img
+                        key={i}
+                        src={url}
+                        alt="Avatar"
+                        onClick={() => setFormData({ ...formData, photoUrl: url })}
+                        className={`w-8 h-8 rounded-full object-cover cursor-pointer transition ring-2 ${
+                          formData.photoUrl === url ? 'ring-blue-600 scale-110' : 'ring-transparent hover:opacity-80'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </div>
               </div>
 
               {/* Bio */}

@@ -104,6 +104,7 @@ export interface QuickLink {
   category: 'Sistemas Internos' | 'Portais' | 'Ferramentas' | 'RH' | 'Externo';
   isOfficial: boolean;
   order: number;
+  orderIndex?: number;
   openInNewTab: boolean;
   badge?: string;
   favoritesCount?: number;
@@ -149,6 +150,7 @@ export interface CalendarEvent {
   startDate: string; // YYYY-MM-DD
   endDate?: string;
   time?: string;
+  eventTime?: string;
   location?: string;
   department?: Department;
   organizer: string;
@@ -322,3 +324,24 @@ export interface WikiArticle {
   views: number;
   tags: string[];
 }
+
+export type VacationStatus = 'Programada' | 'Em Andamento' | 'Concluída' | 'Cancelada';
+
+export interface VacationNotice {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  employeePhotoUrl?: string;
+  department: Department;
+  role: string;
+  startDate: string;
+  endDate: string;
+  daysCount: number;
+  status: VacationStatus;
+  substituteName?: string;
+  substitutePhone?: string;
+  notes?: string;
+  createdBy: string;
+  createdAt: string;
+}
+

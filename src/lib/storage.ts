@@ -9,7 +9,8 @@ import {
   AuditLog,
   Poll,
   WikiArticle,
-  NotificationItem
+  NotificationItem,
+  VacationNotice
 } from '../types';
 
 import {
@@ -23,8 +24,10 @@ import {
   INITIAL_AUDIT_LOGS,
   INITIAL_POLLS,
   INITIAL_WIKI,
-  INITIAL_NOTIFICATIONS
+  INITIAL_NOTIFICATIONS,
+  INITIAL_VACATION_NOTICES
 } from './mockData';
+
 
 import { supabase, toValidUuid } from './supabaseClient';
 
@@ -162,6 +165,31 @@ const syncCalendarEventToSupabase = async (e: CalendarEvent) => {
     console.warn('Supabase sync exception:', err);
   }
 };
+
+const syncVacationNoticeToSupabase = async (v: VacationNotice) => {
+  try {
+    const { error } = await supabase.from('vacation_notices').upsert([{
+      id: toValidUuid(v.id),
+      employee_id: toValidUuid(v.employeeId),
+      employee_name: v.employeeName,
+      employee_photo_url: v.employeePhotoUrl || null,
+      department: v.department,
+      role: v.role,
+      start_date: v.startDate,
+      end_date: v.endDate,
+      days_count: v.daysCount,
+      status: v.status,
+      substitute_name: v.substituteName || null,
+      substitute_phone: v.substitutePhone || null,
+      notes: v.notes || null,
+      created_by: v.createdBy
+    }]);
+    if (error) lastSupabaseError = `Aviso de Férias (${v.employeeName}): ${error.message}`;
+  } catch (err: any) {
+    console.warn('Supabase sync exception:', err);
+  }
+};
+
 
 const syncAuditLogToSupabase = async (log: AuditLog) => {
   try {
@@ -306,6 +334,30 @@ export const syncAllLocalDataToSupabase = async (): Promise<{ success: boolean; 
       else synced++;
     }
 
+    // 7. Vacation Notices
+    const vacations = getVacationNotices();
+    for (const v of vacations) {
+      const { error } = await supabase.from('vacation_notices').upsert([{
+        id: toValidUuid(v.id),
+        employee_id: toValidUuid(v.employeeId),
+        employee_name: v.employeeName,
+        employee_photo_url: v.employeePhotoUrl || null,
+        department: v.department,
+        role: v.role,
+        start_date: v.startDate,
+        end_date: v.endDate,
+        days_count: v.daysCount,
+        status: v.status,
+        substitute_name: v.substituteName || null,
+        substitute_phone: v.substitutePhone || null,
+        notes: v.notes || null,
+        created_by: v.createdBy
+      }]);
+      if (error) errors.push(`Férias ${v.employeeName}: ${error.message}`);
+      else synced++;
+    }
+
+
     if (errors.length > 0) {
       lastSupabaseError = errors[0];
       return {
@@ -345,6 +397,7 @@ const STORAGE_KEYS = {
   POLLS: 'uniccat_intranet_polls_v1',
   WIKI: 'uniccat_intranet_wiki_v1',
   NOTIFICATIONS: 'uniccat_intranet_notifications_v1',
+  VACATIONS: 'uniccat_intranet_vacations_v1',
   USER_FAVORITES: 'uniccat_intranet_favorites_v1',
   THEME: 'uniccat_intranet_theme_v1',
   CHAT_ROOMS: 'uniccat_intranet_chat_rooms_v1',
@@ -585,6 +638,28 @@ export const deleteCalendarEvent = (id: string): void => {
   setStored(STORAGE_KEYS.EVENTS, items);
   supabase.from('calendar_events').delete().eq('id', toValidUuid(id)).then();
 };
+
+// Vacation Notices / Mural de Férias
+export const getVacationNotices = (): VacationNotice[] => getStored(STORAGE_KEYS.VACATIONS, INITIAL_VACATION_NOTICES);
+
+export const saveVacationNotice = (notice: VacationNotice): void => {
+  const items = getVacationNotices();
+  const idx = items.findIndex(v => v.id === notice.id);
+  if (idx >= 0) {
+    items[idx] = notice;
+  } else {
+    items.unshift(notice);
+  }
+  setStored(STORAGE_KEYS.VACATIONS, items);
+  syncVacationNoticeToSupabase(notice);
+};
+
+export const deleteVacationNotice = (id: string): void => {
+  const items = getVacationNotices().filter(v => v.id !== id);
+  setStored(STORAGE_KEYS.VACATIONS, items);
+  supabase.from('vacation_notices').delete().eq('id', toValidUuid(id)).then();
+};
+
 
 // Tickets
 export const getTickets = (): HelpdeskTicket[] => getStored(STORAGE_KEYS.TICKETS, INITIAL_TICKETS);

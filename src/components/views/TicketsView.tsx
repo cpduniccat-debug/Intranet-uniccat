@@ -31,7 +31,8 @@ import {
   Wifi,
   Printer,
   FileCode2,
-  RefreshCw
+  RefreshCw,
+  BarChart3
 } from 'lucide-react';
 import { HelpdeskTicket, UserProfile, Department } from '../../types';
 import { 
@@ -42,6 +43,7 @@ import {
   resolveTicket,
   getUsers 
 } from '../../lib/storage';
+import { TicketSlaReport } from './TicketSlaReport';
 
 interface TicketsViewProps {
   currentUser: UserProfile;
@@ -79,7 +81,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ currentUser }) => {
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [viewTab, setViewTab] = useState<'all' | 'my' | 'glpi'>('all');
+  const [viewTab, setViewTab] = useState<'all' | 'my' | 'glpi' | 'sla_report'>('all');
 
   // Modals
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -403,6 +405,17 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ currentUser }) => {
                 <ShieldCheck className="w-4 h-4" /> Painel GLPI do Administrador / Técnico
               </button>
             )}
+
+            <button
+              onClick={() => setViewTab('sla_report')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+                viewTab === 'sla_report'
+                  ? 'bg-gradient-to-r from-blue-700 to-indigo-700 text-white shadow-xs'
+                  : 'text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100'
+              }`}
+            >
+              <BarChart3 className="w-4 h-4" /> Relatórios & Eficiência SLA
+            </button>
           </div>
 
           <button
@@ -414,7 +427,14 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ currentUser }) => {
           </button>
         </div>
 
-        {/* Filter Toolbar */}
+        {/* Panel Content Based on Selected Tab */}
+        {viewTab === 'sla_report' ? (
+          <div className="p-6">
+            <TicketSlaReport tickets={tickets} onRefresh={reloadTickets} />
+          </div>
+        ) : (
+          <>
+            {/* Filter Toolbar */}
         <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800">
           
           {/* Search */}
@@ -598,6 +618,8 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ currentUser }) => {
             </tbody>
           </table>
         </div>
+          </>
+        )}
 
       </div>
 

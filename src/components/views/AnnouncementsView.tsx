@@ -9,9 +9,13 @@ import {
   X,
   FileText,
   Calendar,
-  Send
+  Send,
+  Upload,
+  Image as ImageIcon,
+  Trash2,
+  Paperclip
 } from 'lucide-react';
-import { Announcement, AnnouncementCategory, AnnouncementPriority, UserProfile } from '../../types';
+import { Announcement, AnnouncementCategory, AnnouncementPriority, AnnouncementAttachment, UserProfile } from '../../types';
 import { getAnnouncements, saveAnnouncement, deleteAnnouncement, confirmAnnouncementRead } from '../../lib/storage';
 
 interface AnnouncementsViewProps {
@@ -37,9 +41,44 @@ export const AnnouncementsView: React.FC<AnnouncementsViewProps> = ({
   const [pinned, setPinned] = useState(false);
   const [requiresReadConfirmation, setRequiresReadConfirmation] = useState(false);
   const [coverImage, setCoverImage] = useState('');
+  const [uploadedImages, setUploadedImages] = useState<{ name: string; url: string }[]>([]);
   const [attachmentName, setAttachmentName] = useState('');
 
   const canManage = currentUser.role === 'Administrador' || currentUser.role === 'RH';
+
+  const handleImageFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    Array.from(files).forEach((file: File) => {
+      if (!file.type.startsWith('image/')) {
+        alert('Por favor selecione apenas arquivos de imagem (JPEG, PNG, GIF, WebP).');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const dataUrl = event.target?.result as string;
+        if (dataUrl) {
+          setUploadedImages(prev => [...prev, { name: file.name, url: dataUrl }]);
+          if (!coverImage) {
+            setCoverImage(dataUrl);
+          }
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleRemoveUploadedImage = (index: number) => {
+    setUploadedImages(prev => {
+      const updated = prev.filter((_, i) => i !== index);
+      if (coverImage === prev[index]?.url) {
+        setCoverImage(updated[0]?.url || '');
+      }
+      return updated;
+    });
+  };
 
   const categories = [
     'Todos',
@@ -59,6 +98,32 @@ export const AnnouncementsView: React.FC<AnnouncementsViewProps> = ({
     e.preventDefault();
     if (!title || !content) return;
 
+    // Build attachments array from uploaded images and PDF name if provided
+    const attachments: AnnouncementAttachment[] = [];
+
+    // Add uploaded images
+    uploadedImages.forEach(img => {
+      attachments.push({
+        name: img.name,
+        type: 'image',
+        url: img.url,
+        size: 'Imagem Corporativa'
+      });
+    });
+
+    // Add PDF attachment if filled
+    if (attachmentName) {
+      attachments.push({
+        name: attachmentName,
+        type: 'pdf',
+        url: '#',
+        size: 'Documento PDF'
+      });
+    }
+
+    // Determine final cover image (either explicitly specified, or first uploaded image)
+    const finalCover = coverImage || (uploadedImages.length > 0 ? uploadedImages[0].url : undefined);
+
     const newAnc: Announcement = {
       id: 'anc-' + Date.now(),
       title,
@@ -71,12 +136,12 @@ export const AnnouncementsView: React.FC<AnnouncementsViewProps> = ({
       authorName: currentUser.name,
       authorRole: currentUser.role,
       authorPhotoUrl: currentUser.photoUrl,
-      coverImage: coverImage || undefined,
+      coverImage: finalCover,
       publishDate: new Date().toISOString().split('T')[0],
       allowComments: true,
       requiresReadConfirmation,
       readBy: [currentUser.id],
-      attachments: attachmentName ? [{ name: attachmentName, type: 'pdf', url: '#' }] : [],
+      attachments,
       createdAt: new Date().toISOString()
     };
 
@@ -89,6 +154,7 @@ export const AnnouncementsView: React.FC<AnnouncementsViewProps> = ({
     setSummary('');
     setContent('');
     setCoverImage('');
+    setUploadedImages([]);
     setAttachmentName('');
   };
 
@@ -332,9 +398,66 @@ export const AnnouncementsView: React.FC<AnnouncementsViewProps> = ({
                 />
               </div>
 
+              {/* Image Upload Field */}
+              <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-200 flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4 text-cyan-400" />
+                    <span>Anexar Imagens / Fotos no Comunicado (JPEG, PNG, max 4MB)</span>
+                  </label>
+                  <span className="text-[10px] text-slate-400">
+                    {uploadedImages.length} imagem(ns) selecionada(s)
+                  </span>
+                </div>
+
+                {/* Upload Button Box */}
+                <div className="relative border-2 border-dashed border-slate-800 hover:border-cyan-500/50 bg-slate-900/50 rounded-xl p-4 text-center transition cursor-pointer group">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleImageFileUpload}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                  />
+                  <div className="flex flex-col items-center justify-center gap-1.5">
+                    <div className="p-2.5 bg-slate-800 group-hover:bg-cyan-950 text-slate-400 group-hover:text-cyan-400 rounded-full transition">
+                      <Upload className="w-5 h-5" />
+                    </div>
+                    <p className="text-xs font-bold text-slate-300">
+                      Clique para selecionar imagens do computador
+                    </p>
+                    <p className="text-[10px] text-slate-500">
+                      Suporta arquivos JPEG, PNG, GIF, WEBP
+                    </p>
+                  </div>
+                </div>
+
+                {/* Uploaded Images Preview Thumbnails */}
+                {uploadedImages.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
+                    {uploadedImages.map((img, idx) => (
+                      <div key={idx} className="relative group rounded-lg overflow-hidden border border-slate-800 bg-slate-900 h-20">
+                        <img src={img.url} alt={img.name} className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveUploadedImage(idx)}
+                          className="absolute top-1 right-1 p-1 bg-rose-600 hover:bg-rose-700 text-white rounded-md shadow-xs opacity-90 transition"
+                          title="Remover imagem"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                        <p className="absolute bottom-0 inset-x-0 p-1 bg-slate-950/80 text-[9px] text-slate-300 truncate">
+                          {img.name}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1">URL da Imagem de Capa (Opcional)</label>
+                  <label className="block font-semibold text-slate-300 mb-1">Ou URL de Capa Externa (Opcional)</label>
                   <input
                     type="url"
                     value={coverImage}

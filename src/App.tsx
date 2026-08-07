@@ -14,6 +14,8 @@ import { ChatView } from './components/views/ChatView';
 import { AdminView } from './components/views/AdminView';
 import { TicketsView } from './components/views/TicketsView';
 import { ProfileView } from './components/views/ProfileView';
+import { HrPortalView } from './components/views/HrPortalView';
+
 import { AnnouncementDetailModal } from './components/modals/AnnouncementDetailModal';
 import { GlobalSearchModal } from './components/modals/GlobalSearchModal';
 import { SqlSchemaModal } from './components/modals/SqlSchemaModal';
@@ -189,20 +191,9 @@ export default function App() {
           )}
 
           {activeView === 'hrportal' && (
-            <div className="max-w-7xl mx-auto space-y-6">
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-3 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-400 rounded-xl">
-                    <UserCheck className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h1 className="text-xl font-bold">Portal do Colaborador & RH</h1>
-                    <p className="text-xs text-slate-500">Consulte saldo de férias, holerites, benefícios e solicitações trabalhistas</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <HrPortalView currentUser={currentUser} />
           )}
+
 
           {activeView === 'wiki' && (
             <div className="max-w-7xl mx-auto space-y-6">

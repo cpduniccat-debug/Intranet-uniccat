@@ -9,8 +9,10 @@ import {
   AuditLog,
   Poll,
   WikiArticle,
-  NotificationItem
+  NotificationItem,
+  VacationNotice
 } from '../types';
+
 
 export const INITIAL_USERS: UserProfile[] = [
   {
@@ -621,3 +623,58 @@ export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
     createdAt: '2026-08-10 08:00'
   }
 ];
+
+export const INITIAL_VACATION_NOTICES: VacationNotice[] = [
+  {
+    id: 'vac-1',
+    employeeId: 'usr-2',
+    employeeName: 'Dra. Mariana Silva Ribeiro',
+    employeePhotoUrl: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=300&q=80',
+    department: 'Medicina Ocupacional',
+    role: 'Médico',
+    startDate: '2026-08-01',
+    endDate: '2026-08-15',
+    daysCount: 15,
+    status: 'Em Andamento',
+    substituteName: 'Dr. Roberto Camargo',
+    substitutePhone: '(11) 98877-6655',
+    notes: 'Acomodação de atendimentos e homologações de ASO redirecionados para a equipe médica de plantão.',
+    createdBy: 'Fernanda Albuquerque (RH)',
+    createdAt: '2026-07-20 09:30'
+  },
+  {
+    id: 'vac-2',
+    employeeId: 'usr-5',
+    employeeName: 'Patricia Lima Soares',
+    employeePhotoUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=300&q=80',
+    department: 'Recepção & Atendimento',
+    role: 'Recepção',
+    startDate: '2026-09-01',
+    endDate: '2026-09-30',
+    daysCount: 30,
+    status: 'Programada',
+    substituteName: 'Juliana Paes (Atendimento)',
+    substitutePhone: '(11) 3456-7801',
+    notes: 'Período integral de férias referente ao período aquisitivo 2024/2025. Escala da recepção ajustada.',
+    createdBy: 'Fernanda Albuquerque (RH)',
+    createdAt: '2026-07-25 14:15'
+  },
+  {
+    id: 'vac-3',
+    employeeId: 'usr-4',
+    employeeName: 'Eng. Ricardo Vasconcelos',
+    employeePhotoUrl: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=300&q=80',
+    department: 'Segurança do Trabalho',
+    role: 'Coordenador',
+    startDate: '2026-10-10',
+    endDate: '2026-10-25',
+    daysCount: 15,
+    status: 'Programada',
+    substituteName: 'Téc. Lucas Andrade',
+    substitutePhone: '(11) 97766-5544',
+    notes: 'Acompanhamento de laudos PGR/LTCAT sob responsabilidade do técnico Lucas durante a ausência.',
+    createdBy: 'Fernanda Albuquerque (RH)',
+    createdAt: '2026-08-01 11:00'
+  }
+];
+

@@ -141,39 +141,87 @@ export const AnnouncementDetailModal: React.FC<AnnouncementDetailModalProps> = (
             {announcement.content}
           </div>
 
-          {/* Attachments */}
+          {/* Image Gallery and Attachments */}
           {announcement.attachments && announcement.attachments.length > 0 && (
-            <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <span>Anexos Disponíveis ({announcement.attachments.length})</span>
-              </h4>
-              <div className="space-y-2">
-                {announcement.attachments.map((att, idx) => (
-                  <div 
-                    key={idx}
-                    className="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg flex items-center justify-between"
-                  >
-                    <div className="flex items-center gap-3 min-w-0 pr-2">
-                      <div className="p-2 bg-blue-50 dark:bg-blue-950 rounded-lg text-blue-700 dark:text-blue-400">
-                        <FileText className="w-4 h-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-semibold text-slate-900 dark:text-white truncate">{att.name}</p>
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400">{att.size || 'Arquivo Corporativo'}</p>
-                      </div>
-                    </div>
-
-                    <a
-                      href={att.url}
-                      download
-                      className="px-3 py-1.5 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 hover:bg-blue-100 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition shrink-0"
-                    >
-                      <Download className="w-3.5 h-3.5" /> Download
-                    </a>
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-4">
+              
+              {/* Image Attachments Gallery */}
+              {announcement.attachments.some(att => att.type === 'image' || att.url.startsWith('data:image/') || att.url.match(/\.(jpeg|jpg|gif|png|webp)/i)) && (
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3 flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    <span>Galeria de Imagens da Comunicação</span>
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                    {announcement.attachments
+                      .filter(att => att.type === 'image' || att.url.startsWith('data:image/') || att.url.match(/\.(jpeg|jpg|gif|png|webp)/i))
+                      .map((imgAtt, idx) => (
+                        <div 
+                          key={idx}
+                          className="relative group rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 shadow-xs"
+                        >
+                          <img
+                            src={imgAtt.url}
+                            alt={imgAtt.name}
+                            className="w-full h-36 object-cover group-hover:scale-105 transition duration-200"
+                          />
+                          <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2">
+                            <a
+                              href={imgAtt.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-3 py-1.5 bg-white text-slate-900 rounded-lg font-bold text-xs shadow-md flex items-center gap-1 hover:bg-slate-100"
+                            >
+                              Ampliar / Ver Imagem
+                            </a>
+                          </div>
+                          <p className="p-2 text-[10px] font-semibold text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-900 truncate border-t border-slate-100 dark:border-slate-800">
+                            {imgAtt.name}
+                          </p>
+                        </div>
+                      ))}
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
+
+              {/* Document / File Attachments */}
+              {announcement.attachments.some(att => att.type !== 'image' && !att.url.startsWith('data:image/') && !att.url.match(/\.(jpeg|jpg|gif|png|webp)/i)) && (
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3 flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    <span>Documentos e Arquivos Anexos</span>
+                  </h4>
+                  <div className="space-y-2">
+                    {announcement.attachments
+                      .filter(att => att.type !== 'image' && !att.url.startsWith('data:image/') && !att.url.match(/\.(jpeg|jpg|gif|png|webp)/i))
+                      .map((att, idx) => (
+                        <div 
+                          key={idx}
+                          className="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg flex items-center justify-between"
+                        >
+                          <div className="flex items-center gap-3 min-w-0 pr-2">
+                            <div className="p-2 bg-blue-50 dark:bg-blue-950 rounded-lg text-blue-700 dark:text-blue-400">
+                              <FileText className="w-4 h-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-semibold text-slate-900 dark:text-white truncate">{att.name}</p>
+                              <p className="text-[10px] text-slate-500 dark:text-slate-400">{att.size || 'Arquivo Corporativo'}</p>
+                            </div>
+                          </div>
+
+                          <a
+                            href={att.url}
+                            download
+                            className="px-3 py-1.5 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 hover:bg-blue-100 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition shrink-0"
+                          >
+                            <Download className="w-3.5 h-3.5" /> Download
+                          </a>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
             </div>
           )}
 
