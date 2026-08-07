@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { UserProfile, Announcement } from './types';
-import { getUsers, getNotifications, getCurrentUser, setCurrentUser } from './lib/storage';
+import { Announcement } from './types';
+import { getNotifications } from './lib/storage';
 import { Header } from './components/layout/Header';
 import { Sidebar } from './components/layout/Sidebar';
 import { LoginView } from './components/auth/LoginView';
@@ -34,11 +34,12 @@ import {
   Clock,
   Plus
 } from 'lucide-react';
+import { supabase } from './lib/supabaseClient';
 
 export default function App() {
-  const [currentUser, setUser] = useState<UserProfile | null>(() => {
-    return getCurrentUser() || getUsers()[0];
-  });
+  // Alterado para gerenciar o estado dinâmico do usuário vindo do Supabase
+  const [currentUser, setUser] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState<string>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
@@ -56,9 +57,39 @@ export default function App() {
     linkView?: string;
   } | null>(null);
 
+  // Verifica persistência de sessão ativa ao carregar a aplicação
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        // Adapta propriedades essenciais legadas que a UI espera usando os dados do Supabase
+        setUser({
+          ...session.user,
+          name: session.user.email?.split('@')[0], // Nome amigável temporário
+          role: 'ADMIN', // Nível de acesso temporário padrão para testes de tela
+        });
+      }
+      setLoading(false);
+    });
+
+    // Escuta mudanças de estado na autenticação (Sign In / Sign Out)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser({
+          ...session.user,
+          name: session.user.email?.split('@')[0],
+          role: 'ADMIN',
+        });
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   useEffect(() => {
     const handleChatMsg = (e: any) => {
-      const { message, room } = e.detail;
+      const { message } = e.detail;
       if (message.senderId !== currentUser?.id) {
         setToast({
           id: 'toast-' + Date.now(),
@@ -80,20 +111,28 @@ export default function App() {
     }
   }, [toast]);
 
-  const handleRefresh = () => {
-    setRefreshTrigger(prev => prev + 1);
-  };
-
-  const handleLoginSuccess = (user: UserProfile) => {
-    setCurrentUser(user);
-    setUser(user);
+  const handleLoginSuccess = (supabaseUser: any) => {
+    setUser({
+      ...supabaseUser,
+      name: supabaseUser.email?.split('@')[0],
+      role: 'ADMIN',
+    });
     setActiveView('dashboard');
   };
 
-  const handleLogout = () => {
-    setCurrentUser(null as any);
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
   };
+
+  // Exibe tela de carregamento sutil para evitar piscar o login na tela
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700"></div>
+      </div>
+    );
+  }
 
   if (!currentUser) {
     return <LoginView onLoginSuccess={handleLoginSuccess} />;
@@ -170,7 +209,6 @@ export default function App() {
             />
           )}
 
-          {/* Secondary Views (Tickets, Bookings, HR Portal, Wiki, OrgChart, Profile, Admin) */}
           {activeView === 'tickets' && (
             <TicketsView currentUser={currentUser} />
           )}
@@ -184,7 +222,7 @@ export default function App() {
                   </div>
                   <div>
                     <h1 className="text-xl font-bold">Reserva de Salas e Veículos Corporativos</h1>
-                    <p className="text-xs text-slate-500">Agende salas de reunião, audiórios e veículos da UNICCAT</p>
+                    <p className="text-xs text-slate-500">Agende salas de reunião, auditórios e veículos da UNICCAT</p>
                   </div>
                 </div>
               </div>
@@ -198,7 +236,6 @@ export default function App() {
           {activeView === 'polls' && (
             <PollsView currentUser={currentUser} />
           )}
-
 
           {activeView === 'wiki' && (
             <div className="max-w-7xl mx-auto space-y-6">
@@ -215,96 +252,8 @@ export default function App() {
               </div>
             </div>
           )}
-
-          {activeView === 'orgchart' && (
-            <div className="max-w-7xl mx-auto space-y-6">
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-3 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-400 rounded-xl">
-                    <Network className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h1 className="text-xl font-bold">Organograma UNICCAT</h1>
-                    <p className="text-xs text-slate-500">Estrutura organizacional, diretorias, gerências e coordenações</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeView === 'profile' && currentUser && (
-            <ProfileView
-              currentUser={currentUser}
-              onUpdateCurrentUser={(updated) => {
-                setCurrentUser(updated);
-              }}
-            />
-          )}
-
-          {activeView === 'admin' && (
-            <AdminView
-              currentUser={currentUser}
-              onOpenSqlModal={() => setSqlModalOpen(true)}
-            />
-          )}
         </main>
       </div>
-
-      {/* Global Modals */}
-      <AnnouncementDetailModal
-        announcement={selectedAnnouncement}
-        onClose={() => setSelectedAnnouncement(null)}
-        currentUser={currentUser}
-        onRefresh={handleRefresh}
-      />
-
-      <GlobalSearchModal
-        isOpen={searchModalOpen}
-        onClose={() => setSearchModalOpen(false)}
-        onNavigate={(v) => setActiveView(v)}
-      />
-
-      <SqlSchemaModal
-        isOpen={sqlModalOpen}
-        onClose={() => setSqlModalOpen(false)}
-      />
-
-      <NotificationSettingsModal
-        isOpen={notifSettingsModalOpen}
-        onClose={() => setNotifSettingsModalOpen(false)}
-        currentUser={currentUser}
-      />
-
-      {/* Realtime Floating Toast Notification */}
-      {toast && (
-        <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-5 fade-in duration-300">
-          <div 
-            onClick={() => {
-              if (toast.linkView) setActiveView(toast.linkView);
-              setToast(null);
-            }}
-            className="p-4 bg-slate-900 border border-blue-500/50 text-white rounded-2xl shadow-2xl flex items-start gap-3 max-w-sm cursor-pointer hover:bg-slate-800 transition"
-          >
-            <div className="p-2 bg-blue-600/30 text-blue-400 rounded-xl shrink-0">
-              <CheckCircle2 className="w-5 h-5" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-bold text-xs text-blue-300">{toast.title}</p>
-              <p className="text-xs text-slate-200 mt-0.5 line-clamp-2">{toast.message}</p>
-            </div>
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                setToast(null);
-              }}
-              className="text-slate-400 hover:text-white p-1"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 }
