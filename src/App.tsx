@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Announcement } from './types';
-import { getNotifications } from './lib/storage';
 import { Header } from './components/layout/Header';
 import { Sidebar } from './components/layout/Sidebar';
 import { LoginView } from './components/auth/LoginView';
@@ -21,19 +20,7 @@ import { AnnouncementDetailModal } from './components/modals/AnnouncementDetailM
 import { GlobalSearchModal } from './components/modals/GlobalSearchModal';
 import { SqlSchemaModal } from './components/modals/SqlSchemaModal';
 import { NotificationSettingsModal } from './components/modals/NotificationSettingsModal';
-import { 
-  LifeBuoy, 
-  CalendarCheck, 
-  UserCheck, 
-  Vote, 
-  HelpCircle, 
-  Network, 
-  ShieldCheck, 
-  User as UserIcon,
-  CheckCircle2,
-  Clock,
-  Plus
-} from 'lucide-react';
+import { CalendarCheck, HelpCircle } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
 
 export default function App() {
@@ -45,7 +32,6 @@ export default function App() {
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [sqlModalOpen, setSqlModalOpen] = useState(false);
   const [notifSettingsModalOpen, setNotifSettingsModalOpen] = useState(false);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const [toast, setToast] = useState<{
     id: string;
@@ -55,7 +41,6 @@ export default function App() {
     linkView?: string;
   } | null>(null);
 
-  // Função interna para buscar dados estendidos do perfil no banco do Supabase
   const fetchUserProfile = async (supabaseUser: any) => {
     try {
       const { data, error } = await supabase
@@ -75,7 +60,6 @@ export default function App() {
           photoUrl: data.avatar_url || null
         });
       } else {
-        // Fallback caso a tabela profiles não tenha o registro ainda
         setUser({
           id: supabaseUser.id,
           email: supabaseUser.email,
@@ -91,7 +75,6 @@ export default function App() {
   };
 
   useEffect(() => {
-    // 1. Checa sessão ativa ao inicializar
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         fetchUserProfile(session.user).then(() => setLoading(false));
@@ -100,7 +83,6 @@ export default function App() {
       }
     });
 
-    // 2. Escuta eventos reais de login e logout globais
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         fetchUserProfile(session.user);
@@ -201,6 +183,10 @@ export default function App() {
           {activeView === 'phonebook' && <PhoneBookView currentUser={currentUser} />}
           {activeView === 'chat' && <ChatView currentUser={currentUser} />}
           {activeView === 'tickets' && <TicketsView currentUser={currentUser} />}
+          {activeView === 'hrportal' && <HrPortalView currentUser={currentUser} />}
+          {activeView === 'polls' && <PollsView currentUser={currentUser} />}
+          {activeView === 'profile' && <ProfileView currentUser={currentUser} />}
+          {activeView === 'admin' && <AdminView currentUser={currentUser} />}
 
           {activeView === 'bookings' && (
             <div className="max-w-7xl mx-auto space-y-6">
@@ -217,9 +203,6 @@ export default function App() {
               </div>
             </div>
           )}
-
-          {activeView === 'hrportal' && <HrPortalView currentUser={currentUser} />}
-          {activeView === 'polls' && <PollsView currentUser={currentUser} />}
 
           {activeView === 'wiki' && (
             <div className="max-w-7xl mx-auto space-y-6">
@@ -238,6 +221,35 @@ export default function App() {
           )}
         </main>
       </div>
-    </div>
-  );
-}
+
+      {/* Modais Globais de Controle de Interface */}
+      {selectedAnnouncement && (
+        <AnnouncementDetailModal
+          announcement={selectedAnnouncement}
+          onClose={() => setSelectedAnnouncement(null)}
+        />
+      )}
+
+      <GlobalSearchModal
+        isOpen={searchModalOpen}
+        onClose={() => setSearchModalOpen(false)}
+        onNavigate={(view) => setActiveView(view)}
+      />
+
+      <SqlSchemaModal
+        isOpen={sqlModalOpen}
+        onClose={() => sqlModalOpen(false)}
+      />
+
+      <NotificationSettingsModal
+        isOpen={notifSettingsModalOpen}
+        onClose={() => setNotifSettingsModalOpen(false)}
+      />
+
+      {/* Componente Toast flutuante de Notificação */}
+      {toast && (
+        <div 
+          onClick={() => { if(toast.linkView) setActiveView(toast.linkView); setToast(null); }}
+          className="fixed bottom-5 right-5 z-50 p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl cursor-pointer hover:scale-105 transition max-w-sm"
+        >
+          <p className="font-bold text-sm text-blue-900 dark:text-blue-400">{toast.title}</p>
