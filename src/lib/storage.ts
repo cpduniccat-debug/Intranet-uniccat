@@ -26,7 +26,7 @@ import {
   INITIAL_NOTIFICATIONS
 } from './mockData';
 
-import { supabase } from './supabaseClient';
+import { supabase, toValidUuid } from './supabaseClient';
 
 let lastSupabaseError: string | null = null;
 export const getLastSupabaseError = () => lastSupabaseError;
@@ -35,7 +35,7 @@ export const getLastSupabaseError = () => lastSupabaseError;
 const syncProfileToSupabase = async (user: UserProfile) => {
   try {
     const { error } = await supabase.from('profiles').upsert([{
-      id: user.id,
+      id: toValidUuid(user.id),
       name: user.name,
       email: user.email,
       role: user.role,
@@ -62,7 +62,7 @@ const syncProfileToSupabase = async (user: UserProfile) => {
 const syncAnnouncementToSupabase = async (a: Announcement) => {
   try {
     const { error } = await supabase.from('announcements').upsert([{
-      id: a.id,
+      id: toValidUuid(a.id),
       title: a.title,
       summary: a.summary,
       content: a.content,
@@ -87,7 +87,7 @@ const syncAnnouncementToSupabase = async (a: Announcement) => {
 const syncTicketToSupabase = async (t: HelpdeskTicket) => {
   try {
     const { error } = await supabase.from('tickets').upsert([{
-      id: t.id,
+      id: toValidUuid(t.id),
       code: t.code,
       title: t.title,
       description: t.description,
@@ -104,7 +104,7 @@ const syncTicketToSupabase = async (t: HelpdeskTicket) => {
 const syncQuickLinkToSupabase = async (l: QuickLink) => {
   try {
     const { error } = await supabase.from('quick_links').upsert([{
-      id: l.id,
+      id: toValidUuid(l.id),
       title: l.title,
       description: l.description,
       url: l.url,
@@ -123,7 +123,7 @@ const syncQuickLinkToSupabase = async (l: QuickLink) => {
 const syncDocumentToSupabase = async (d: DocumentFile) => {
   try {
     const { error } = await supabase.from('documents').upsert([{
-      id: d.id,
+      id: toValidUuid(d.id),
       title: d.title,
       description: d.description,
       category: d.category,
@@ -145,7 +145,7 @@ const syncDocumentToSupabase = async (d: DocumentFile) => {
 const syncCalendarEventToSupabase = async (e: CalendarEvent) => {
   try {
     const { error } = await supabase.from('calendar_events').upsert([{
-      id: e.id,
+      id: toValidUuid(e.id),
       title: e.title,
       description: e.description,
       category: e.category,
@@ -166,8 +166,8 @@ const syncCalendarEventToSupabase = async (e: CalendarEvent) => {
 const syncAuditLogToSupabase = async (log: AuditLog) => {
   try {
     const { error } = await supabase.from('audit_logs').insert([{
-      id: log.id,
-      user_id: log.userId,
+      id: toValidUuid(log.id),
+      user_id: toValidUuid(log.userId),
       user_name: log.userName,
       action: log.action,
       details: log.details,
@@ -188,7 +188,7 @@ export const syncAllLocalDataToSupabase = async (): Promise<{ success: boolean; 
     const users = getUsers();
     for (const u of users) {
       const { error } = await supabase.from('profiles').upsert([{
-        id: u.id,
+        id: toValidUuid(u.id),
         name: u.name,
         email: u.email,
         role: u.role,
@@ -211,7 +211,7 @@ export const syncAllLocalDataToSupabase = async (): Promise<{ success: boolean; 
     const announ = getAnnouncements();
     for (const a of announ) {
       const { error } = await supabase.from('announcements').upsert([{
-        id: a.id,
+        id: toValidUuid(a.id),
         title: a.title,
         summary: a.summary,
         content: a.content,
@@ -235,7 +235,7 @@ export const syncAllLocalDataToSupabase = async (): Promise<{ success: boolean; 
     const links = getQuickLinks();
     for (const l of links) {
       const { error } = await supabase.from('quick_links').upsert([{
-        id: l.id,
+        id: toValidUuid(l.id),
         title: l.title,
         description: l.description,
         url: l.url,
@@ -253,7 +253,7 @@ export const syncAllLocalDataToSupabase = async (): Promise<{ success: boolean; 
     const docs = getDocuments();
     for (const d of docs) {
       const { error } = await supabase.from('documents').upsert([{
-        id: d.id,
+        id: toValidUuid(d.id),
         title: d.title,
         description: d.description,
         category: d.category,
@@ -274,7 +274,7 @@ export const syncAllLocalDataToSupabase = async (): Promise<{ success: boolean; 
     const tickets = getTickets();
     for (const t of tickets) {
       const { error } = await supabase.from('tickets').upsert([{
-        id: t.id,
+        id: toValidUuid(t.id),
         code: t.code,
         title: t.title,
         description: t.description,
@@ -290,7 +290,7 @@ export const syncAllLocalDataToSupabase = async (): Promise<{ success: boolean; 
     const events = getCalendarEvents();
     for (const e of events) {
       const { error } = await supabase.from('calendar_events').upsert([{
-        id: e.id,
+        id: toValidUuid(e.id),
         title: e.title,
         description: e.description,
         category: e.category,
@@ -431,7 +431,7 @@ export const updateUserPassword = (userId: string, newPassword: string): void =>
 export const deleteUser = (userId: string): void => {
   const users = getUsers().filter(u => u.id !== userId);
   setStored(STORAGE_KEYS.USERS, users);
-  supabase.from('profiles').delete().eq('id', userId).then();
+  supabase.from('profiles').delete().eq('id', toValidUuid(userId)).then();
 };
 
 export const getCurrentUser = (): UserProfile | null => {
@@ -460,7 +460,7 @@ export const saveAnnouncement = (announcement: Announcement): void => {
 export const deleteAnnouncement = (id: string): void => {
   const items = getAnnouncements().filter(a => a.id !== id);
   setStored(STORAGE_KEYS.ANNOUNCEMENTS, items);
-  supabase.from('announcements').delete().eq('id', id).then();
+  supabase.from('announcements').delete().eq('id', toValidUuid(id)).then();
 };
 
 
@@ -512,7 +512,7 @@ export const saveQuickLink = (link: QuickLink): void => {
 export const deleteQuickLink = (id: string): void => {
   const items = getQuickLinks().filter(l => l.id !== id);
   setStored(STORAGE_KEYS.QUICK_LINKS, items);
-  supabase.from('quick_links').delete().eq('id', id).then();
+  supabase.from('quick_links').delete().eq('id', toValidUuid(id)).then();
 };
 
 // Favorites
@@ -550,7 +550,7 @@ export const saveDocument = (doc: DocumentFile): void => {
 export const deleteDocument = (id: string): void => {
   const items = getDocuments().filter(d => d.id !== id);
   setStored(STORAGE_KEYS.DOCUMENTS, items);
-  supabase.from('documents').delete().eq('id', id).then();
+  supabase.from('documents').delete().eq('id', toValidUuid(id)).then();
 };
 
 export const confirmDocumentRead = (docId: string, userId: string): void => {
@@ -583,7 +583,7 @@ export const saveCalendarEvent = (evt: CalendarEvent): void => {
 export const deleteCalendarEvent = (id: string): void => {
   const items = getCalendarEvents().filter(e => e.id !== id);
   setStored(STORAGE_KEYS.EVENTS, items);
-  supabase.from('calendar_events').delete().eq('id', id).then();
+  supabase.from('calendar_events').delete().eq('id', toValidUuid(id)).then();
 };
 
 // Tickets

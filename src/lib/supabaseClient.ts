@@ -13,6 +13,19 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 
 export const isSupabaseConfigured = () => !!supabaseUrl && !!supabaseAnonKey;
 
+export function toValidUuid(str?: string): string {
+  if (!str) return '00000000-0000-4000-8000-000000000001';
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (uuidRegex.test(str)) return str;
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash |= 0;
+  }
+  const hex = Math.abs(hash).toString(16).padStart(12, '0');
+  return `00000000-0000-4000-8000-${hex.slice(0, 12).padStart(12, '0')}`;
+}
+
 export interface SupabaseTestResult {
   success: boolean;
   message: string;
@@ -59,8 +72,8 @@ export const testSupabaseConnection = async (): Promise<SupabaseTestResult> => {
       };
     }
 
-    // Try a test write operation
-    const testId = 'test-' + Date.now();
+    // Try a test write operation with valid UUID
+    const testId = toValidUuid('test-' + Date.now());
     const { error: writeError } = await supabase.from('audit_logs').insert([
       {
         id: testId,
@@ -88,9 +101,17 @@ export const testSupabaseConnection = async (): Promise<SupabaseTestResult> => {
           details: writeError
         };
       }
+      if (writeError.code === '23503') {
+        return {
+          success: false,
+          message: 'Restrição de Chave Estrangeira do Supabase detectada (23503). Execute o script de desbloqueio para liberar os registros.',
+          errorCode: writeError.code,
+          details: writeError
+        };
+      }
       return {
         success: false,
-        message: `A gravação falhou: ${writeError.message}`,
+        message: `A gravação falhou (${writeError.code}): ${writeError.message}`,
         errorCode: writeError.code,
         details: writeError
       };
