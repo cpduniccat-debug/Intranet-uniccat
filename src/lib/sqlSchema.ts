@@ -306,23 +306,33 @@ VALUES
 ON CONFLICT DO NOTHING;
 `;
 
-export const UNICCAT_SUPABASE_UNBLOCK_RLS_SQL = `-- SCRIPT PARA DESBLOQUEAR GRAVAÇÃO E LEITURA NO SUPABASE (EXECUTAR NO SQL EDITOR)
--- Este script concede permissão de leitura e gravação para a Anon Key do Supabase nas tabelas da Intranet.
+export const UNICCAT_SUPABASE_UNBLOCK_RLS_SQL = `-- SCRIPT DE CONFIGURAÇÃO DE POLÍTICAS RLS NO SUPABASE (EXECUTAR NO SQL EDITOR DO SUPABASE)
+-- Este script configura o Row Level Security (RLS) e garante permissões de criação, leitura e alteração nas tabelas da Intranet.
 
--- 1. DESVINCULAR RESTRIÇÃO DE AUTENTICAÇÃO DO PROFILE PARA PERMITIR USUÁRIOS DA INTRANET
+-- 1. REMOVER RESTRIÇÃO DE AUTENTICAÇÃO DO PROFILE PARA PERMITIR USUÁRIOS DA INTRANET
 ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_id_fkey;
 
--- 2. CONCEDER PERMISSÕES DE TABELA
+-- 2. CONCEDER ACESSO DE SCHEMA, TABELAS E SEQUÊNCIAS
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
 
--- 3. DESABILITAR RLS EM TODAS AS TABELAS PARA PERMITIR LEITURA E ESCRITA PÚBLICA
+-- 3. HABILITAR RLS E CRIAR POLÍTICAS DE CRIAÇÃO/ESCRITA/LEITURA PERMISSIVAS EM TODAS AS TABELAS
 DO $$ 
 DECLARE 
     t text;
 BEGIN
-    FOR t IN SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' LOOP
-        EXECUTE format('ALTER TABLE public.%I DISABLE ROW LEVEL SECURITY;', t);
+    FOR t IN SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE' LOOP
+        -- Habilitar Row Level Security
+        EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY;', t);
+        
+        -- Limpar políticas anteriores se existirem
+        EXECUTE format('DROP POLICY IF EXISTS "uniccat_permissive_all" ON public.%I;', t);
+        EXECUTE format('DROP POLICY IF EXISTS "Permitir leitura publica %I" ON public.%I;', t, t);
+        EXECUTE format('DROP POLICY IF EXISTS "Permitir escrita publica %I" ON public.%I;', t, t);
+        
+        -- Criar Política RLS Universal para Leitura, Criação (INSERT), Edição e Exclusão
+        EXECUTE format('CREATE POLICY "uniccat_permissive_all" ON public.%I FOR ALL TO anon, authenticated, service_role USING (true) WITH CHECK (true);', t);
     END LOOP;
 END $$;
 `;

@@ -20,6 +20,7 @@ import {
   Calendar, 
   BadgeCheck, 
   Eye, 
+  EyeOff,
   Power,
   RefreshCw,
   Sparkles,
@@ -94,6 +95,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ currentUser, onOpenSqlModa
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    password: 'UNiccat@2026',
     role: 'Funcionário' as Role,
     department: 'Medicina Ocupacional' as Department,
     phone: '(11) 3300-1000',
@@ -107,6 +109,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ currentUser, onOpenSqlModa
     active: true
   });
 
+  const [showPassword, setShowPassword] = useState(false);
   const [formError, setFormError] = useState('');
   const [formSuccess, setFormSuccess] = useState('');
 
@@ -160,6 +163,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ currentUser, onOpenSqlModa
     setFormData({
       name: '',
       email: '',
+      password: 'UNiccat@2026',
       role: 'Funcionário',
       department: 'Medicina Ocupacional',
       phone: '(11) 3300-1000',
@@ -172,6 +176,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ currentUser, onOpenSqlModa
       bio: 'Novo colaborador integrado à equipe UNICCAT.',
       active: true
     });
+    setShowPassword(true);
     setFormError('');
     setFormSuccess('');
     setIsModalOpen(true);
@@ -182,6 +187,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ currentUser, onOpenSqlModa
     setFormData({
       name: user.name,
       email: user.email,
+      password: user.password || 'UNiccat@2026',
       role: user.role,
       department: user.department,
       phone: user.phone || '(11) 3300-1000',
@@ -194,6 +200,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ currentUser, onOpenSqlModa
       bio: user.bio || '',
       active: user.active
     });
+    setShowPassword(false);
     setFormError('');
     setFormSuccess('');
     setIsModalOpen(true);
@@ -214,6 +221,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ currentUser, onOpenSqlModa
       return;
     }
 
+    if (!formData.password.trim() || formData.password.trim().length < 4) {
+      setFormError('Por favor informe uma senha de acesso válida (mínimo 4 caracteres).');
+      return;
+    }
+
     const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
 
     if (editingUser) {
@@ -222,6 +234,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ currentUser, onOpenSqlModa
         ...editingUser,
         name: formData.name.trim(),
         email: formData.email.trim(),
+        password: formData.password.trim(),
         role: formData.role,
         department: formData.department,
         phone: formData.phone,
@@ -235,8 +248,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ currentUser, onOpenSqlModa
         active: formData.active
       };
       saveUser(updated);
-      addAuditLog(currentUser, 'EDITAR_PERMISSAO', `Perfil de usuário "${updated.name}" (${updated.email}) atualizado pelo administrador.`);
-      setFormSuccess('Usuário atualizado com sucesso!');
+      addAuditLog(currentUser, 'EDITAR_PERMISSAO', `Perfil e senha de acesso do usuário "${updated.name}" (${updated.email}) atualizados pelo administrador.`);
+      setFormSuccess('Usuário e senha atualizados com sucesso!');
     } else {
       // Check duplicate email
       const existing = users.find(u => u.email.toLowerCase() === formData.email.trim().toLowerCase());
@@ -250,6 +263,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ currentUser, onOpenSqlModa
         id: 'u-' + Date.now(),
         name: formData.name.trim(),
         email: formData.email.trim(),
+        password: formData.password.trim(),
         role: formData.role,
         department: formData.department,
         phone: formData.phone,
@@ -264,8 +278,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ currentUser, onOpenSqlModa
         createdAt: nowStr
       };
       saveUser(newUser);
-      addAuditLog(currentUser, 'EDITAR_PERMISSAO', `Novo usuário "${newUser.name}" (${newUser.role} - ${newUser.department}) criado com sucesso.`);
-      setFormSuccess('Novo usuário criado e ativado com sucesso!');
+      addAuditLog(currentUser, 'EDITAR_PERMISSAO', `Novo usuário "${newUser.name}" (${newUser.role} - ${newUser.department}) criado com senha customizada.`);
+      setFormSuccess('Novo usuário cadastrado e ativado com sucesso!');
     }
 
     setTimeout(() => {
@@ -894,6 +908,50 @@ export const AdminView: React.FC<AdminViewProps> = ({ currentUser, onOpenSqlModa
                     placeholder="mariana.costa@uniccat.com.br"
                     className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-medium text-slate-900 dark:text-white"
                   />
+                </div>
+
+                {/* Password Field */}
+                <div className="sm:col-span-2 p-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                      <Key className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                      <span>Senha de Acesso do Usuário *</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789@#$';
+                        let gen = 'UNiccat@';
+                        for (let i = 0; i < 4; i++) gen += chars.charAt(Math.floor(Math.random() * chars.length));
+                        setFormData({ ...formData, password: gen });
+                        setShowPassword(true);
+                      }}
+                      className="text-[11px] font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 hover:underline"
+                    >
+                      <Sparkles className="w-3 h-3" /> Gerar Senha Segura
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      value={formData.password}
+                      onChange={e => setFormData({ ...formData, password: e.target.value })}
+                      placeholder="Informe ou altere a senha de acesso..."
+                      className="w-full pl-3 pr-10 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg font-mono text-slate-900 dark:text-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
+                      title={showPassword ? 'Ocultar Senha' : 'Exibir Senha'}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Defina a senha com a qual este colaborador irá realizar login na Intranet.
+                  </p>
                 </div>
 
                 {/* Role / Cargo */}
