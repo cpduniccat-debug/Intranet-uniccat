@@ -222,7 +222,6 @@ export default function App() {
         </main>
       </div>
 
-      {/* Modais Globais de Controle de Interface */}
       {selectedAnnouncement && (
         <AnnouncementDetailModal
           announcement={selectedAnnouncement}
@@ -246,10 +245,15 @@ export default function App() {
         onClose={() => setNotifSettingsModalOpen(false)}
       />
 
-      {/* Componente Toast flutuante de Notificação */}
       {toast && (
         <div 
           onClick={() => { if(toast.linkView) setActiveView(toast.linkView); setToast(null); }}
           className="fixed bottom-5 right-5 z-50 p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl cursor-pointer hover:scale-105 transition max-w-sm"
         >
           <p className="font-bold text-sm text-blue-900 dark:text-blue-400">{toast.title}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{toast.message}</p>
+        </div>
+      )}
+    </div>
+  );
+}
