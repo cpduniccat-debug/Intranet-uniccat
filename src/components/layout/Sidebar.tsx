@@ -11,18 +11,16 @@ import {
   CalendarCheck, 
   UserCheck, 
   HelpCircle, 
-  BarChart3, 
   ShieldCheck,
   Vote,
   ChevronRight,
   MessageSquare
 } from 'lucide-react';
-import { UserProfile } from '../../types';
 
 interface SidebarProps {
   activeView: string;
   onNavigate: (view: string) => void;
-  currentUser: UserProfile;
+  currentUser: any; // Alterado para aceitar qualquer estrutura dinâmica do Supabase
   isOpen: boolean;
 }
 
@@ -95,6 +93,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   if (!isOpen) return null;
 
+  // Tratamento de variáveis com fallbacks seguros para evitar quebras de runtime
+  const userName = currentUser?.name || currentUser?.email?.split('@')[0] || 'Usuário';
+  const userDepartment = currentUser?.department || 'Geral';
+  const userRamal = currentUser?.ramal || currentUser?.extension || '---';
+  const userRole = currentUser?.role || 'USER';
+
   return (
     <aside className="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 flex flex-col shrink-0 min-h-[calc(100vh-4rem)] transition-all shadow-sm">
       
@@ -102,17 +106,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="p-4 bg-slate-50 dark:bg-slate-950/80 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3">
         <div className="relative">
           <img
-            src={currentUser.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
-            alt={currentUser.name}
+            src={currentUser?.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
+            alt={userName}
             className="w-10 h-10 rounded-full object-cover ring-2 ring-blue-600/80"
           />
           <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-white dark:ring-slate-950" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{currentUser.name}</p>
-          <p className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold truncate">{currentUser.department}</p>
+          <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{userName}</p>
+          <p className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold truncate">{userDepartment}</p>
           <span className="inline-block text-[9px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">
-            Ramal: {currentUser.extension}
+            Ramal: {userRamal}
           </span>
         </div>
       </div>
@@ -120,10 +124,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Navigation Links */}
       <div className="flex-1 overflow-y-auto p-3 space-y-5">
         {sections.map((section, idx) => {
-          // Filter out admin-only items if user is not admin or RH
+          // Filtra itens administrativos com base no cargo vindo do banco
           const visibleItems = section.items.filter(item => {
             if (item.adminOnly) {
-              return currentUser.role === 'Administrador' || currentUser.role === 'RH';
+              return userRole === 'ADMIN' || userRole === 'Administrador' || userRole === 'RH';
             }
             return true;
           });
