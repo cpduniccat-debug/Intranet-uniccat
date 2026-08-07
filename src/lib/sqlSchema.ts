@@ -254,34 +254,37 @@ ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_presences ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notification_preferences ENABLE ROW LEVEL SECURITY;
 
--- POLÍTICAS DE CHAT E MENSAGENS REALTIME
-CREATE POLICY "Participantes podem ler salas de chat" ON public.chat_rooms
-  FOR SELECT TO authenticated USING (auth.uid() = ANY(participant_ids));
+-- POLÍTICAS DE PERMISSÃO PARA INTRANET (PERMITIR ACESSO ANON & AUTHENTICATED)
+-- Permite leitura e escrita via API Key do Supabase (Anon Key)
+CREATE POLICY "Permitir leitura publica profiles" ON public.profiles FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Permitir escrita publica profiles" ON public.profiles FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 
-CREATE POLICY "Usuários autenticados podem criar salas de chat" ON public.chat_rooms
-  FOR INSERT TO authenticated WITH CHECK (true);
+CREATE POLICY "Permitir leitura publica announcements" ON public.announcements FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Permitir escrita publica announcements" ON public.announcements FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 
-CREATE POLICY "Participantes podem ler mensagens da sala" ON public.chat_messages
-  FOR SELECT TO authenticated USING (
-    EXISTS (
-      SELECT 1 FROM public.chat_rooms 
-      WHERE id = chat_messages.room_id AND auth.uid() = ANY(participant_ids)
-    )
-  );
+CREATE POLICY "Permitir leitura publica tickets" ON public.tickets FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Permitir escrita publica tickets" ON public.tickets FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 
-CREATE POLICY "Participantes podem enviar mensagens" ON public.chat_messages
-  FOR INSERT TO authenticated WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.chat_rooms 
-      WHERE id = chat_messages.room_id AND auth.uid() = ANY(participant_ids)
-    )
-  );
+CREATE POLICY "Permitir leitura publica quick_links" ON public.quick_links FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Permitir escrita publica quick_links" ON public.quick_links FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 
-CREATE POLICY "Todos os usuários autenticados podem ver presença" ON public.user_presences
-  FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Permitir leitura publica documents" ON public.documents FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Permitir escrita publica documents" ON public.documents FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 
-CREATE POLICY "Usuários gerenciam sua própria presença" ON public.user_presences
-  FOR ALL TO authenticated USING (auth.uid() = user_id);
+CREATE POLICY "Permitir leitura publica calendar_events" ON public.calendar_events FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Permitir escrita publica calendar_events" ON public.calendar_events FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+
+CREATE POLICY "Permitir leitura publica audit_logs" ON public.audit_logs FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Permitir escrita publica audit_logs" ON public.audit_logs FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+
+CREATE POLICY "Permitir leitura publica chat_rooms" ON public.chat_rooms FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Permitir escrita publica chat_rooms" ON public.chat_rooms FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+
+CREATE POLICY "Permitir leitura publica chat_messages" ON public.chat_messages FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Permitir escrita publica chat_messages" ON public.chat_messages FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+
+CREATE POLICY "Permitir leitura publica user_presences" ON public.user_presences FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Permitir escrita publica user_presences" ON public.user_presences FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 
 -- HABILITAR PUBLICAÇÃO REALTIME SUPABASE
 DO $$ BEGIN
@@ -290,39 +293,6 @@ DO $$ BEGIN
   ALTER PUBLICATION supabase_realtime ADD TABLE public.user_presences;
   ALTER PUBLICATION supabase_realtime ADD TABLE public.announcements;
 EXCEPTION WHEN OTHERS THEN null; END $$;
-
--- POLÍTICAS DE PERFIL
-CREATE POLICY "Usuários autenticados podem ler perfis" ON public.profiles
-  FOR SELECT TO authenticated USING (true);
-
-CREATE POLICY "Administradores e RH podem gerenciar todos os perfis" ON public.profiles
-  FOR ALL TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles 
-      WHERE id = auth.uid() AND role IN ('Administrador', 'RH')
-    )
-  );
-
--- POLÍTICAS DE COMUNICADOS
-CREATE POLICY "Todos podem ler comunicados ativos" ON public.announcements
-  FOR SELECT TO authenticated USING (true);
-
-CREATE POLICY "Apenas RH e Admins podem criar e editar comunicados" ON public.announcements
-  FOR ALL TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles 
-      WHERE id = auth.uid() AND role IN ('Administrador', 'RH')
-    )
-  );
-
--- POLÍTICAS DE LINKS RÁPIDOS E DOCUMENTOS
-CREATE POLICY "Todos podem visualizar links rápidos" ON public.quick_links
-  FOR SELECT TO authenticated USING (true);
-
-CREATE POLICY "Todos podem visualizar documentos" ON public.documents
-  FOR SELECT TO authenticated USING (true);
 
 -- DADOS INICIAIS (SEED)
 INSERT INTO public.quick_links (title, description, url, icon_name, category, is_official, order_index, badge)
@@ -334,4 +304,22 @@ VALUES
 ('Assistente.net', 'Plataforma Integrada de Documentos e eSocial', 'https://plataforma.assistente.net.br/auth/login', 'FileCheck', 'Sistemas Internos', true, 5, 'eSocial'),
 ('Secullum Ponto Web', 'Registro de Ponto Eletrônico', 'https://autenticador.secullum.com.br/Authorization?client_id=3001&response_type=code&redirect_uri=https%3A%2F%2Fpontoweb.secullum.com.br%2FAuth', 'Clock', 'RH', true, 6, 'Ponto')
 ON CONFLICT DO NOTHING;
+`;
+
+export const UNICCAT_SUPABASE_UNBLOCK_RLS_SQL = `-- SCRIPT PARA DESBLOQUEAR GRAVAÇÃO E LEITURA NO SUPABASE (EXECUTAR NO SQL EDITOR)
+-- Este script concede permissão de leitura e gravação para a Anon Key do Supabase nas tabelas da Intranet.
+
+-- 1. CONCEDER PERMISSÕES DE TABELA
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+
+-- 2. DESABILITAR RLS OU ADICIONAR POLÍTICAS PERMISSIVAS
+DO $$ 
+DECLARE 
+    t text;
+BEGIN
+    FOR t IN SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' LOOP
+        EXECUTE format('ALTER TABLE public.%I DISABLE ROW LEVEL SECURITY;', t);
+    END LOOP;
+END $$;
 `;

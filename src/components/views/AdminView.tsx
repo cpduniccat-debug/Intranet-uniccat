@@ -28,9 +28,12 @@ import {
   LifeBuoy
 } from 'lucide-react';
 import { UserProfile, Role, Department, AuditLog } from '../../types';
-import { getUsers, saveUser, deleteUser, getAuditLogs, addAuditLog } from '../../lib/storage';
-import { isSupabaseConfigured } from '../../lib/supabaseClient';
+import { getUsers, saveUser, deleteUser, getAuditLogs, addAuditLog, syncAllLocalDataToSupabase, getLastSupabaseError } from '../../lib/storage';
+import { isSupabaseConfigured, testSupabaseConnection, SupabaseTestResult, supabaseUrl, supabaseAnonKey } from '../../lib/supabaseClient';
+import { UNICCAT_SUPABASE_UNBLOCK_RLS_SQL } from '../../lib/sqlSchema';
 import { TicketsView } from './TicketsView';
+import { Copy, Download, CloudUpload, ShieldAlert } from 'lucide-react';
+
 
 interface AdminViewProps {
   currentUser: UserProfile;
@@ -109,6 +112,36 @@ export const AdminView: React.FC<AdminViewProps> = ({ currentUser, onOpenSqlModa
 
   // Delete User Confirmation
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+
+  // Supabase Diagnostics & Sync State
+  const [testResult, setTestResult] = useState<SupabaseTestResult | null>(null);
+  const [testingConn, setTestingConn] = useState(false);
+  const [syncingData, setSyncingData] = useState(false);
+  const [syncResult, setSyncResult] = useState<{ success: boolean; message: string; count?: number } | null>(null);
+  const [copiedRlsSql, setCopiedRlsSql] = useState(false);
+
+  const handleTestSupabase = async () => {
+    setTestingConn(true);
+    setTestResult(null);
+    const res = await testSupabaseConnection();
+    setTestResult(res);
+    setTestingConn(false);
+  };
+
+  const handleSyncAllToSupabase = async () => {
+    setSyncingData(true);
+    setSyncResult(null);
+    const res = await syncAllLocalDataToSupabase();
+    setSyncResult(res);
+    setSyncingData(false);
+  };
+
+  const handleCopyRlsSql = () => {
+    navigator.clipboard.writeText(UNICCAT_SUPABASE_UNBLOCK_RLS_SQL);
+    setCopiedRlsSql(true);
+    setTimeout(() => setCopiedRlsSql(false), 2500);
+  };
+
 
   const loadData = () => {
     setUsers(getUsers());
@@ -639,36 +672,147 @@ export const AdminView: React.FC<AdminViewProps> = ({ currentUser, onOpenSqlModa
         {/* TAB 3: SUPABASE CONFIG */}
         {activeTab === 'supabase' && (
           <div className="p-6 space-y-6">
-            <div className="p-5 bg-blue-50/50 dark:bg-slate-950 border border-blue-200 dark:border-slate-800 rounded-2xl space-y-3">
-              <div className="flex items-center gap-3">
-                <Database className="w-6 h-6 text-emerald-600" />
-                <div>
-                  <h3 className="font-bold text-base text-slate-900 dark:text-white">Arquitetura de Dados Supabase (PostgreSQL & Realtime)</h3>
-                  <p className="text-xs text-slate-500">Todas as tabelas do sistema contam com Row Level Security (RLS) habilitado.</p>
+            
+            {/* Status & Connection Credentials Box */}
+            <div className="p-5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-emerald-100 dark:bg-emerald-950/80 border border-emerald-200 dark:border-emerald-800 rounded-xl text-emerald-600 dark:text-emerald-400">
+                    <Database className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
+                      <span>Conexão Supabase PostgreSQL & Realtime</span>
+                      <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 font-bold rounded-full text-[10px]">
+                        Ativo
+                      </span>
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Integração de gravação contínua em tempo real com o banco de dados nuvem.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleTestSupabase}
+                    disabled={testingConn}
+                    className="px-4 py-2 bg-blue-700 hover:bg-blue-800 disabled:opacity-50 text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow-xs transition"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${testingConn ? 'animate-spin' : ''}`} />
+                    <span>{testingConn ? 'Testando Conexão...' : 'Testar Leitura & Escrita'}</span>
+                  </button>
+
+                  <button
+                    onClick={handleSyncAllToSupabase}
+                    disabled={syncingData}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow-xs transition"
+                  >
+                    <CloudUpload className={`w-4 h-4 ${syncingData ? 'animate-spin' : ''}`} />
+                    <span>{syncingData ? 'Sincronizando...' : 'Forçar Sincronização Geral'}</span>
+                  </button>
                 </div>
               </div>
 
-              <div className="p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
+              {/* Connection Details Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1 font-mono overflow-hidden">
+                  <span className="font-bold text-slate-400 dark:text-slate-500 uppercase text-[10px] block font-sans">URL do Supabase:</span>
+                  <p className="text-slate-800 dark:text-slate-200 truncate">{supabaseUrl}</p>
+                </div>
+
+                <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1 font-mono overflow-hidden">
+                  <span className="font-bold text-slate-400 dark:text-slate-500 uppercase text-[10px] block font-sans">Chave de API (Anon Key):</span>
+                  <p className="text-slate-800 dark:text-slate-200 truncate">{supabaseAnonKey.substring(0, 24)}...</p>
+                </div>
+              </div>
+
+              {/* Test Result Banner */}
+              {testResult && (
+                <div className={`p-4 rounded-xl border text-xs flex items-start gap-3 ${
+                  testResult.success 
+                    ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-300' 
+                    : 'bg-amber-50 dark:bg-amber-950/60 border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-300'
+                }`}>
+                  {testResult.success ? (
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                  )}
+                  <div className="space-y-1 flex-1">
+                    <p className="font-bold text-sm">{testResult.message}</p>
+                    {testResult.errorCode && (
+                      <p className="font-mono text-[11px] opacity-80">Código do Erro: {testResult.errorCode}</p>
+                    )}
+                    {!testResult.success && (
+                      <div className="mt-2 pt-2 border-t border-amber-200 dark:border-amber-800 flex items-center justify-between gap-2">
+                        <span>Execute o script de desbloqueio RLS no SQL Editor do Supabase para liberá-la.</span>
+                        <button
+                          onClick={handleCopyRlsSql}
+                          className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shrink-0"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>{copiedRlsSql ? 'Copiado!' : 'Copiar Script RLS'}</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Sync Result Banner */}
+              {syncResult && (
+                <div className={`p-4 rounded-xl border text-xs flex items-start gap-3 ${
+                  syncResult.success 
+                    ? 'bg-blue-50 dark:bg-blue-950/60 border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-300' 
+                    : 'bg-rose-50 dark:bg-rose-950/60 border-rose-200 dark:border-rose-800 text-rose-900 dark:text-rose-300'
+                }`}>
+                  {syncResult.success ? (
+                    <CheckCircle2 className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                  )}
+                  <div className="space-y-1">
+                    <p className="font-bold text-sm">{syncResult.message}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Tables overview & DDL buttons */}
+              <div className="p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3 text-xs">
                 <p className="font-bold text-slate-800 dark:text-slate-200">Tabelas Estruturadas no Schema:</p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                   <div className="p-2 bg-slate-50 dark:bg-slate-800 rounded font-mono">public.profiles</div>
                   <div className="p-2 bg-slate-50 dark:bg-slate-800 rounded font-mono">public.announcements</div>
                   <div className="p-2 bg-slate-50 dark:bg-slate-800 rounded font-mono">public.chat_rooms</div>
                   <div className="p-2 bg-slate-50 dark:bg-slate-800 rounded font-mono">public.chat_messages</div>
                   <div className="p-2 bg-slate-50 dark:bg-slate-800 rounded font-mono">public.user_presences</div>
                   <div className="p-2 bg-slate-50 dark:bg-slate-800 rounded font-mono">public.tickets</div>
+                  <div className="p-2 bg-slate-50 dark:bg-slate-800 rounded font-mono">public.quick_links</div>
+                  <div className="p-2 bg-slate-50 dark:bg-slate-800 rounded font-mono">public.documents</div>
+                </div>
+
+                <div className="pt-2 flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={onOpenSqlModal}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow-xs transition"
+                  >
+                    <Database className="w-4 h-4" /> Visualizar DDL SQL Completo & Schema
+                  </button>
+
+                  <button
+                    onClick={handleCopyRlsSql}
+                    className="px-4 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 text-slate-800 dark:text-white font-bold text-xs rounded-xl flex items-center gap-2 transition"
+                  >
+                    <Copy className="w-4 h-4 text-slate-500" />
+                    <span>{copiedRlsSql ? 'Script RLS Copiado!' : 'Copiar SQL Desbloqueio RLS'}</span>
+                  </button>
                 </div>
               </div>
-
-              <button
-                onClick={onOpenSqlModal}
-                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow-sm transition"
-              >
-                <Database className="w-4 h-4" /> Visualizar DDL SQL Completo & Políticas RLS
-              </button>
             </div>
           </div>
         )}
+
 
         {/* TAB 4: GLPI HELPDESK */}
         {activeTab === 'glpi' && (

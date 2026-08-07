@@ -26,6 +26,312 @@ import {
   INITIAL_NOTIFICATIONS
 } from './mockData';
 
+import { supabase } from './supabaseClient';
+
+let lastSupabaseError: string | null = null;
+export const getLastSupabaseError = () => lastSupabaseError;
+
+// Supabase Async Persistence Helpers
+const syncProfileToSupabase = async (user: UserProfile) => {
+  try {
+    const { error } = await supabase.from('profiles').upsert([{
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      department: user.department,
+      phone: user.phone || null,
+      extension: user.extension || null,
+      mobile: user.mobile || null,
+      photo_url: user.photoUrl,
+      active: user.active !== false,
+      birth_date: user.birthDate || null,
+      hire_date: user.hireDate || null,
+      bio: user.bio || null,
+      location: user.location || 'Unidade Matriz'
+    }]);
+    if (error) {
+      console.warn('Supabase profile sync:', error.message);
+      lastSupabaseError = `Perfil (${user.name}): ${error.message}`;
+    }
+  } catch (err: any) {
+    console.warn('Supabase sync exception:', err);
+  }
+};
+
+const syncAnnouncementToSupabase = async (a: Announcement) => {
+  try {
+    const { error } = await supabase.from('announcements').upsert([{
+      id: a.id,
+      title: a.title,
+      summary: a.summary,
+      content: a.content,
+      category: a.category,
+      priority: a.priority,
+      pinned: a.pinned,
+      author_name: a.authorName,
+      author_role: a.authorRole,
+      author_photo_url: a.authorPhotoUrl,
+      cover_image: a.coverImage,
+      publish_date: a.publishDate,
+      expiration_date: a.expirationDate || null,
+      allow_comments: a.allowComments,
+      requires_read_confirmation: a.requiresReadConfirmation
+    }]);
+    if (error) lastSupabaseError = `Comunicado (${a.title}): ${error.message}`;
+  } catch (err: any) {
+    console.warn('Supabase sync exception:', err);
+  }
+};
+
+const syncTicketToSupabase = async (t: HelpdeskTicket) => {
+  try {
+    const { error } = await supabase.from('tickets').upsert([{
+      id: t.id,
+      code: t.code,
+      title: t.title,
+      description: t.description,
+      category: t.category,
+      priority: t.priority,
+      status: t.status
+    }]);
+    if (error) lastSupabaseError = `Chamado (${t.code}): ${error.message}`;
+  } catch (err: any) {
+    console.warn('Supabase sync exception:', err);
+  }
+};
+
+const syncQuickLinkToSupabase = async (l: QuickLink) => {
+  try {
+    const { error } = await supabase.from('quick_links').upsert([{
+      id: l.id,
+      title: l.title,
+      description: l.description,
+      url: l.url,
+      icon_name: l.iconName,
+      category: l.category,
+      is_official: l.isOfficial,
+      order_index: l.orderIndex || 0,
+      badge: l.badge || null
+    }]);
+    if (error) lastSupabaseError = `Link (${l.title}): ${error.message}`;
+  } catch (err: any) {
+    console.warn('Supabase sync exception:', err);
+  }
+};
+
+const syncDocumentToSupabase = async (d: DocumentFile) => {
+  try {
+    const { error } = await supabase.from('documents').upsert([{
+      id: d.id,
+      title: d.title,
+      description: d.description,
+      category: d.category,
+      file_type: d.fileType,
+      file_size: d.fileSize,
+      download_url: d.downloadUrl,
+      author_name: d.authorName,
+      department: d.department,
+      version: d.version,
+      downloads_count: d.downloadsCount,
+      mandatory_reading: d.mandatoryReading
+    }]);
+    if (error) lastSupabaseError = `Documento (${d.title}): ${error.message}`;
+  } catch (err: any) {
+    console.warn('Supabase sync exception:', err);
+  }
+};
+
+const syncCalendarEventToSupabase = async (e: CalendarEvent) => {
+  try {
+    const { error } = await supabase.from('calendar_events').upsert([{
+      id: e.id,
+      title: e.title,
+      description: e.description,
+      category: e.category,
+      start_date: e.startDate,
+      end_date: e.endDate || null,
+      event_time: e.eventTime || null,
+      location: e.location || null,
+      organizer: e.organizer,
+      department: e.department || null,
+      is_all_day: e.isAllDay
+    }]);
+    if (error) lastSupabaseError = `Evento (${e.title}): ${error.message}`;
+  } catch (err: any) {
+    console.warn('Supabase sync exception:', err);
+  }
+};
+
+const syncAuditLogToSupabase = async (log: AuditLog) => {
+  try {
+    const { error } = await supabase.from('audit_logs').insert([{
+      id: log.id,
+      user_id: log.userId,
+      user_name: log.userName,
+      action: log.action,
+      details: log.details,
+      ip_address: log.ipAddress
+    }]);
+    if (error) lastSupabaseError = `Auditoria: ${error.message}`;
+  } catch (err: any) {
+    console.warn('Supabase sync exception:', err);
+  }
+};
+
+export const syncAllLocalDataToSupabase = async (): Promise<{ success: boolean; message: string; count: number }> => {
+  let synced = 0;
+  const errors: string[] = [];
+
+  try {
+    // 1. Users / Profiles
+    const users = getUsers();
+    for (const u of users) {
+      const { error } = await supabase.from('profiles').upsert([{
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        department: u.department,
+        phone: u.phone || null,
+        extension: u.extension || null,
+        mobile: u.mobile || null,
+        photo_url: u.photoUrl,
+        active: u.active !== false,
+        birth_date: u.birthDate || null,
+        hire_date: u.hireDate || null,
+        bio: u.bio || null,
+        location: u.location || 'Unidade Matriz'
+      }]);
+      if (error) errors.push(`Perfil ${u.name}: ${error.message}`);
+      else synced++;
+    }
+
+    // 2. Announcements
+    const announ = getAnnouncements();
+    for (const a of announ) {
+      const { error } = await supabase.from('announcements').upsert([{
+        id: a.id,
+        title: a.title,
+        summary: a.summary,
+        content: a.content,
+        category: a.category,
+        priority: a.priority,
+        pinned: a.pinned,
+        author_name: a.authorName,
+        author_role: a.authorRole,
+        author_photo_url: a.authorPhotoUrl,
+        cover_image: a.coverImage,
+        publish_date: a.publishDate,
+        expiration_date: a.expirationDate || null,
+        allow_comments: a.allowComments,
+        requires_read_confirmation: a.requiresReadConfirmation
+      }]);
+      if (error) errors.push(`Comunicado ${a.title}: ${error.message}`);
+      else synced++;
+    }
+
+    // 3. Quick Links
+    const links = getQuickLinks();
+    for (const l of links) {
+      const { error } = await supabase.from('quick_links').upsert([{
+        id: l.id,
+        title: l.title,
+        description: l.description,
+        url: l.url,
+        icon_name: l.iconName,
+        category: l.category,
+        is_official: l.isOfficial,
+        order_index: l.orderIndex || 0,
+        badge: l.badge || null
+      }]);
+      if (error) errors.push(`Link ${l.title}: ${error.message}`);
+      else synced++;
+    }
+
+    // 4. Documents
+    const docs = getDocuments();
+    for (const d of docs) {
+      const { error } = await supabase.from('documents').upsert([{
+        id: d.id,
+        title: d.title,
+        description: d.description,
+        category: d.category,
+        file_type: d.fileType,
+        file_size: d.fileSize,
+        download_url: d.downloadUrl,
+        author_name: d.authorName,
+        department: d.department,
+        version: d.version,
+        downloads_count: d.downloadsCount,
+        mandatory_reading: d.mandatoryReading
+      }]);
+      if (error) errors.push(`Documento ${d.title}: ${error.message}`);
+      else synced++;
+    }
+
+    // 5. Tickets
+    const tickets = getTickets();
+    for (const t of tickets) {
+      const { error } = await supabase.from('tickets').upsert([{
+        id: t.id,
+        code: t.code,
+        title: t.title,
+        description: t.description,
+        category: t.category,
+        priority: t.priority,
+        status: t.status
+      }]);
+      if (error) errors.push(`Chamado ${t.code}: ${error.message}`);
+      else synced++;
+    }
+
+    // 6. Calendar Events
+    const events = getCalendarEvents();
+    for (const e of events) {
+      const { error } = await supabase.from('calendar_events').upsert([{
+        id: e.id,
+        title: e.title,
+        description: e.description,
+        category: e.category,
+        start_date: e.startDate,
+        end_date: e.endDate || null,
+        event_time: e.eventTime || null,
+        location: e.location || null,
+        organizer: e.organizer,
+        department: e.department || null,
+        is_all_day: e.isAllDay
+      }]);
+      if (error) errors.push(`Evento ${e.title}: ${error.message}`);
+      else synced++;
+    }
+
+    if (errors.length > 0) {
+      lastSupabaseError = errors[0];
+      return {
+        success: false,
+        message: `Sincronização parcial (${synced} salvos). Erros: ${errors.slice(0, 2).join(' | ')}`,
+        count: synced
+      };
+    }
+
+    lastSupabaseError = null;
+    return {
+      success: true,
+      message: `Sucesso! Todos os ${synced} registros foram salvos e sincronizados no Supabase.`,
+      count: synced
+    };
+  } catch (err: any) {
+    lastSupabaseError = err.message || String(err);
+    return {
+      success: false,
+      message: `Erro de sincronização com Supabase: ${err.message || err}`,
+      count: synced
+    };
+  }
+};
+
+
 const STORAGE_KEYS = {
   USERS: 'uniccat_intranet_users_v1',
   CURRENT_USER: 'uniccat_intranet_current_user_v1',
@@ -99,6 +405,9 @@ export const saveUser = (user: UserProfile): void => {
   if (current && current.id === user.id) {
     setStored(STORAGE_KEYS.CURRENT_USER, userToSave);
   }
+
+  // Sync to Supabase
+  syncProfileToSupabase(userToSave);
 };
 
 export const updateUserPassword = (userId: string, newPassword: string): void => {
@@ -113,12 +422,16 @@ export const updateUserPassword = (userId: string, newPassword: string): void =>
       current.password = newPassword;
       setStored(STORAGE_KEYS.CURRENT_USER, current);
     }
+
+    // Sync to Supabase
+    syncProfileToSupabase(item);
   }
 };
 
 export const deleteUser = (userId: string): void => {
   const users = getUsers().filter(u => u.id !== userId);
   setStored(STORAGE_KEYS.USERS, users);
+  supabase.from('profiles').delete().eq('id', userId).then();
 };
 
 export const getCurrentUser = (): UserProfile | null => {
@@ -141,12 +454,15 @@ export const saveAnnouncement = (announcement: Announcement): void => {
     items.unshift(announcement);
   }
   setStored(STORAGE_KEYS.ANNOUNCEMENTS, items);
+  syncAnnouncementToSupabase(announcement);
 };
 
 export const deleteAnnouncement = (id: string): void => {
   const items = getAnnouncements().filter(a => a.id !== id);
   setStored(STORAGE_KEYS.ANNOUNCEMENTS, items);
+  supabase.from('announcements').delete().eq('id', id).then();
 };
+
 
 export const confirmAnnouncementRead = (announcementId: string, userId: string): void => {
   const items = getAnnouncements();
@@ -190,11 +506,13 @@ export const saveQuickLink = (link: QuickLink): void => {
     items.push(link);
   }
   setStored(STORAGE_KEYS.QUICK_LINKS, items);
+  syncQuickLinkToSupabase(link);
 };
 
 export const deleteQuickLink = (id: string): void => {
   const items = getQuickLinks().filter(l => l.id !== id);
   setStored(STORAGE_KEYS.QUICK_LINKS, items);
+  supabase.from('quick_links').delete().eq('id', id).then();
 };
 
 // Favorites
@@ -226,11 +544,13 @@ export const saveDocument = (doc: DocumentFile): void => {
     items.unshift(doc);
   }
   setStored(STORAGE_KEYS.DOCUMENTS, items);
+  syncDocumentToSupabase(doc);
 };
 
 export const deleteDocument = (id: string): void => {
   const items = getDocuments().filter(d => d.id !== id);
   setStored(STORAGE_KEYS.DOCUMENTS, items);
+  supabase.from('documents').delete().eq('id', id).then();
 };
 
 export const confirmDocumentRead = (docId: string, userId: string): void => {
@@ -257,11 +577,13 @@ export const saveCalendarEvent = (evt: CalendarEvent): void => {
     items.push(evt);
   }
   setStored(STORAGE_KEYS.EVENTS, items);
+  syncCalendarEventToSupabase(evt);
 };
 
 export const deleteCalendarEvent = (id: string): void => {
   const items = getCalendarEvents().filter(e => e.id !== id);
   setStored(STORAGE_KEYS.EVENTS, items);
+  supabase.from('calendar_events').delete().eq('id', id).then();
 };
 
 // Tickets
@@ -276,6 +598,7 @@ export const saveTicket = (ticket: HelpdeskTicket): void => {
     items.unshift(ticket);
   }
   setStored(STORAGE_KEYS.TICKETS, items);
+  syncTicketToSupabase(ticket);
 };
 
 export const addTicketComment = (ticketId: string, content: string, user: UserProfile): void => {
@@ -293,6 +616,7 @@ export const addTicketComment = (ticketId: string, content: string, user: UserPr
     });
     item.updatedAt = new Date().toISOString().replace('T', ' ').substring(0, 16);
     setStored(STORAGE_KEYS.TICKETS, items);
+    syncTicketToSupabase(item);
   }
 };
 
@@ -315,6 +639,7 @@ export const classifyTicket = (
     if (item.status === 'Aberto') item.status = 'Em Andamento';
     item.updatedAt = new Date().toISOString().replace('T', ' ').substring(0, 16);
     setStored(STORAGE_KEYS.TICKETS, items);
+    syncTicketToSupabase(item);
   }
 };
 
@@ -344,6 +669,7 @@ export const resolveTicket = (
     });
 
     setStored(STORAGE_KEYS.TICKETS, items);
+    syncTicketToSupabase(item);
   }
 };
 
@@ -411,8 +737,7 @@ export const addNotification = (notif: Omit<NotificationItem, 'id' | 'createdAt'
 export const getAuditLogs = (): AuditLog[] => getStored(STORAGE_KEYS.AUDIT_LOGS, INITIAL_AUDIT_LOGS);
 
 export const addAuditLog = (user: UserProfile, action: AuditLog['action'], details: string): void => {
-  const logs = getAuditLogs();
-  logs.unshift({
+  const logItem: AuditLog = {
     id: 'aud-' + Date.now(),
     userId: user.id,
     userName: user.name,
@@ -420,9 +745,13 @@ export const addAuditLog = (user: UserProfile, action: AuditLog['action'], detai
     details,
     ipAddress: '192.168.0.' + Math.floor(Math.random() * 200 + 10),
     timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
-  });
+  };
+  const logs = getAuditLogs();
+  logs.unshift(logItem);
   setStored(STORAGE_KEYS.AUDIT_LOGS, logs);
+  syncAuditLogToSupabase(logItem);
 };
+
 
 // ==========================================
 // CHAT & REALTIME INSTANT MESSAGING MODULE
