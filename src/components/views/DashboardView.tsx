@@ -189,10 +189,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-blue-300 dark:hover:border-blue-700 rounded-xl overflow-hidden shadow-sm transition-all duration-200 cursor-pointer flex flex-col justify-between"
               >
                 {/* Thumbnail Header if exists */}
-                {a.coverImage && (
+                {Boolean(a.coverImage) && (
                   <div className="relative h-40 w-full overflow-hidden bg-slate-100 dark:bg-slate-950">
                     <img
-                      src={a.coverImage}
+                      src={a.coverImage || undefined}
                       alt={a.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
@@ -233,7 +233,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   {/* Read Status & Read More Footer */}
                   <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2">
-                      <img src={a.authorPhotoUrl} alt={a.authorName} className="w-6 h-6 rounded-full object-cover" />
+                      <img src={a.authorPhotoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'} alt={a.authorName} className="w-6 h-6 rounded-full object-cover" />
                       <span className="text-[11px] text-slate-600 dark:text-slate-400 font-medium truncate max-w-[120px]">
                         {a.authorName}
                       </span>
@@ -373,7 +373,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   className="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg flex items-center justify-between gap-3 hover:border-amber-400 transition"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <img src={b.photoUrl} alt={b.name} className="w-10 h-10 rounded-full object-cover ring-2 ring-amber-400 shrink-0" />
+                    <img src={b.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'} alt={b.name} className="w-10 h-10 rounded-full object-cover ring-2 ring-amber-400 shrink-0" />
                     <div className="min-w-0">
                       <p className="font-bold text-xs text-slate-900 dark:text-white truncate">{b.name}</p>
                       <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{b.department}</p>

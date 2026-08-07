@@ -595,7 +595,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ currentUser, onOpenSqlModa
                         <td className="p-3.5">
                           <div className="flex items-center gap-3">
                             <img
-                              src={user.photoUrl}
+                              src={user.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
                               alt={user.name}
                               className="w-10 h-10 rounded-full object-cover ring-2 ring-slate-200 dark:ring-slate-700"
                             />
@@ -1087,7 +1087,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ currentUser, onOpenSqlModa
 
                 <div className="flex items-center gap-3">
                   <img
-                    src={formData.photoUrl}
+                    src={formData.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
                     alt="Foto do colaborador"
                     className="w-14 h-14 rounded-full object-cover ring-2 ring-blue-600/40 shrink-0 shadow-xs"
                   />

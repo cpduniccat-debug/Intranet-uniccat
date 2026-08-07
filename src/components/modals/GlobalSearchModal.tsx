@@ -237,7 +237,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
                     onClick={() => handleSelect('phonebook')}
                     className="p-2.5 bg-slate-50 dark:bg-slate-950 hover:bg-blue-50/60 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 hover:border-blue-300 rounded-lg cursor-pointer transition flex items-center gap-3 group"
                   >
-                    <img src={u.photoUrl} alt={u.name} className="w-9 h-9 rounded-full object-cover" />
+                    <img src={u.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'} alt={u.name} className="w-9 h-9 rounded-full object-cover" />
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-semibold text-slate-900 dark:text-white group-hover:text-blue-700 dark:group-hover:text-blue-300 truncate">{u.name}</p>
                       <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{u.department}</p>

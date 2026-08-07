@@ -87,7 +87,7 @@ export const PhoneBookView: React.FC = () => {
           >
             <div className="flex items-start gap-4">
               <img
-                src={user.photoUrl}
+                src={user.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
                 alt={user.name}
                 className="w-14 h-14 rounded-full object-cover ring-2 ring-emerald-500/50 group-hover:ring-emerald-400 shrink-0"
               />

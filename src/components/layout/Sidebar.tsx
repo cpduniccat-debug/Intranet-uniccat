@@ -102,7 +102,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="p-4 bg-slate-50 dark:bg-slate-950/80 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3">
         <div className="relative">
           <img
-            src={currentUser.photoUrl}
+            src={currentUser.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
             alt={currentUser.name}
             className="w-10 h-10 rounded-full object-cover ring-2 ring-blue-600/80"
           />

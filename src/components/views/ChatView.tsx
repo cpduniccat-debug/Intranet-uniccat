@@ -331,7 +331,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
           <div className="flex items-center gap-3">
             <div className="relative">
               <img
-                src={currentUser.photoUrl}
+                src={currentUser.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
                 alt={currentUser.name}
                 className="w-9 h-9 rounded-full object-cover ring-2 ring-blue-600"
               />
@@ -471,7 +471,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 >
                   <div className="relative shrink-0">
                     {room.type === 'direct' ? (
-                      <img src={photo} alt={roomName} className="w-10 h-10 rounded-full object-cover ring-1 ring-slate-200 dark:ring-slate-700" />
+                      <img src={photo || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'} alt={roomName} className="w-10 h-10 rounded-full object-cover ring-1 ring-slate-200 dark:ring-slate-700" />
                     ) : (
                       <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-bold flex items-center justify-center text-sm shadow-xs">
                         <Users className="w-5 h-5" />
@@ -531,7 +531,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
             <div className="flex items-center gap-3 min-w-0">
               {activeRoom.type === 'direct' && roomPartner ? (
                 <div className="relative shrink-0">
-                  <img src={roomPartner.photoUrl} alt={roomPartner.name} className="w-10 h-10 rounded-full object-cover ring-2 ring-blue-600" />
+                  <img src={roomPartner.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'} alt={roomPartner.name} className="w-10 h-10 rounded-full object-cover ring-2 ring-blue-600" />
                   <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 ${getStatusColor(presences[roomPartner.id]?.status)} rounded-full ring-2 ring-white dark:ring-slate-950`} />
                 </div>
               ) : (
@@ -621,7 +621,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     {/* Sender Avatar */}
                     {!isMe && (
                       <img
-                        src={msg.senderPhotoUrl}
+                        src={msg.senderPhotoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
                         alt={msg.senderName}
                         className="w-8 h-8 rounded-full object-cover ring-1 ring-slate-200 dark:ring-slate-700 shrink-0 mt-1"
                       />
@@ -744,7 +744,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
             <div className="p-3 bg-blue-50 dark:bg-slate-950 border-t border-blue-200 dark:border-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {selectedAttachment.previewUrl ? (
-                  <img src={selectedAttachment.previewUrl} alt="Preview" className="w-10 h-10 rounded-lg object-cover" />
+                  <img src={selectedAttachment.previewUrl || undefined} alt="Preview" className="w-10 h-10 rounded-lg object-cover" />
                 ) : (
                   <FileText className="w-8 h-8 text-blue-600" />
                 )}
@@ -864,7 +864,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                         className="py-2 px-2 flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg"
                       >
                         <div className="flex items-center gap-2">
-                          <img src={usr.photoUrl} alt={usr.name} className="w-7 h-7 rounded-full object-cover" />
+                          <img src={usr.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'} alt={usr.name} className="w-7 h-7 rounded-full object-cover" />
                           <div>
                             <p className="text-xs font-semibold text-slate-900 dark:text-white">{usr.name}</p>
                             <p className="text-[10px] text-slate-400">{usr.role} • {usr.department}</p>
@@ -919,7 +919,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     onClick={() => handleStartDirect(usr)}
                     className="p-3 flex items-center gap-3 hover:bg-blue-50 dark:hover:bg-slate-800 cursor-pointer transition"
                   >
-                    <img src={usr.photoUrl} alt={usr.name} className="w-9 h-9 rounded-full object-cover" />
+                    <img src={usr.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'} alt={usr.name} className="w-9 h-9 rounded-full object-cover" />
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-bold text-slate-900 dark:text-white">{usr.name}</p>
                       <p className="text-[10px] text-slate-500">{usr.role} • {usr.department}</p>

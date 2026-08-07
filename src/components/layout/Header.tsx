@@ -232,7 +232,7 @@ export const Header: React.FC<HeaderProps> = ({
               className="flex items-center gap-2.5 p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition border border-transparent"
             >
               <img
-                src={currentUser.photoUrl}
+                src={currentUser.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
                 alt={currentUser.name}
                 className="w-9 h-9 rounded-full object-cover ring-2 ring-slate-200 dark:ring-slate-700"
               />
@@ -251,7 +251,7 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 overflow-hidden text-slate-800 dark:text-slate-200">
                 <div className="p-4 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3">
                   <img
-                    src={currentUser.photoUrl}
+                    src={currentUser.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
                     alt={currentUser.name}
                     className="w-10 h-10 rounded-full object-cover ring-2 ring-blue-600"
                   />

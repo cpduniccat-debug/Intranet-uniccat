@@ -246,10 +246,10 @@ export const AnnouncementsView: React.FC<AnnouncementsViewProps> = ({
               onClick={() => onSelectAnnouncement(a)}
               className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-blue-300 dark:hover:border-blue-700 rounded-xl overflow-hidden shadow-sm transition duration-200 cursor-pointer flex flex-col justify-between group"
             >
-              {a.coverImage && (
+              {Boolean(a.coverImage) && (
                 <div className="relative h-44 w-full bg-slate-100 dark:bg-slate-950 overflow-hidden">
                   <img
-                    src={a.coverImage}
+                    src={a.coverImage || undefined}
                     alt={a.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                   />
@@ -290,7 +290,7 @@ export const AnnouncementsView: React.FC<AnnouncementsViewProps> = ({
 
                 <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
-                    <img src={a.authorPhotoUrl} alt={a.authorName} className="w-6 h-6 rounded-full object-cover" />
+                    <img src={a.authorPhotoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'} alt={a.authorName} className="w-6 h-6 rounded-full object-cover" />
                     <span className="text-[11px] text-slate-600 dark:text-slate-400 truncate max-w-[100px]">{a.authorName}</span>
                   </div>
 
@@ -437,7 +437,7 @@ export const AnnouncementsView: React.FC<AnnouncementsViewProps> = ({
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
                     {uploadedImages.map((img, idx) => (
                       <div key={idx} className="relative group rounded-lg overflow-hidden border border-slate-800 bg-slate-900 h-20">
-                        <img src={img.url} alt={img.name} className="w-full h-full object-cover" />
+                        <img src={img.url || undefined} alt={img.name} className="w-full h-full object-cover" />
                         <button
                           type="button"
                           onClick={() => handleRemoveUploadedImage(idx)}

@@ -120,7 +120,7 @@ export const AnnouncementDetailModal: React.FC<AnnouncementDetailModalProps> = (
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 text-xs text-slate-500">
             <div className="flex items-center gap-3">
               <img
-                src={announcement.authorPhotoUrl}
+                src={announcement.authorPhotoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
                 alt={announcement.authorName}
                 className="w-9 h-9 rounded-full object-cover ring-2 ring-slate-200 dark:ring-slate-800"
               />
@@ -161,7 +161,7 @@ export const AnnouncementDetailModal: React.FC<AnnouncementDetailModalProps> = (
                           className="relative group rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 shadow-xs"
                         >
                           <img
-                            src={imgAtt.url}
+                            src={imgAtt.url || undefined}
                             alt={imgAtt.name}
                             className="w-full h-36 object-cover group-hover:scale-105 transition duration-200"
                           />
@@ -262,7 +262,7 @@ export const AnnouncementDetailModal: React.FC<AnnouncementDetailModalProps> = (
                 {announcement.comments && announcement.comments.length > 0 ? (
                   announcement.comments.map(cm => (
                     <div key={cm.id} className="p-3 bg-slate-50 dark:bg-slate-950 rounded-lg border border-slate-200 dark:border-slate-800 flex items-start gap-3">
-                      <img src={cm.userPhotoUrl} alt={cm.userName} className="w-7 h-7 rounded-full object-cover shrink-0 mt-0.5" />
+                      <img src={cm.userPhotoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'} alt={cm.userName} className="w-7 h-7 rounded-full object-cover shrink-0 mt-0.5" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
                           <p className="text-xs font-semibold text-slate-900 dark:text-white">{cm.userName}</p>

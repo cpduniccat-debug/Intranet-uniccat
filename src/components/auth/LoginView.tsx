@@ -195,7 +195,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 onClick={() => handleQuickLogin(u)}
                 className="p-2 bg-slate-50 hover:bg-blue-50/60 dark:bg-slate-950/80 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 hover:border-blue-300 rounded-lg text-left transition flex items-center gap-2 group"
               >
-                <img src={u.photoUrl} alt={u.name} className="w-7 h-7 rounded-full object-cover shrink-0" />
+                <img src={u.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'} alt={u.name} className="w-7 h-7 rounded-full object-cover shrink-0" />
                 <div className="min-w-0">
                   <p className="text-[11px] font-bold text-slate-800 dark:text-slate-200 group-hover:text-blue-700 dark:group-hover:text-blue-300 truncate">{u.name.split(' ')[0]}</p>
                   <p className="text-[9px] text-blue-600 dark:text-blue-400 font-medium truncate">{u.role}</p>

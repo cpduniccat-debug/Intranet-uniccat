@@ -195,7 +195,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ currentUser, onUpdateC
         
         <div className="relative shrink-0">
           <img
-            src={currentUser.photoUrl}
+            src={currentUser.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
             alt={currentUser.name}
             className="w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover ring-4 ring-blue-600 shadow-md"
           />
@@ -383,7 +383,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ currentUser, onUpdateC
                   {/* Photo Preview */}
                   <div className="relative shrink-0 group">
                     <img
-                      src={profileData.photoUrl}
+                      src={profileData.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
                       alt="Prévia da Foto"
                       className="w-20 h-20 rounded-full object-cover ring-4 ring-blue-600/30 shadow-md"
                     />
