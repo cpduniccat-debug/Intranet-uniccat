@@ -10,9 +10,4 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   }
 });
 
-export const isSupabaseConfigured = (): boolean => {
-  return (
-    !!metaEnv.VITE_SUPABASE_URL &&
-    metaEnv.VITE_SUPABASE_URL !== 'https://sqnlvnrcxeiiahbaxtlr.supabase.co'
-  );
-};
+export const isSupabaseConfigured = () => true;
