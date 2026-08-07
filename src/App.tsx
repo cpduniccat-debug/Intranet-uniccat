@@ -37,7 +37,6 @@ import {
 import { supabase } from './lib/supabaseClient';
 
 export default function App() {
-  // Alterado para gerenciar o estado dinâmico do usuário vindo do Supabase
   const [currentUser, setUser] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState<string>('dashboard');
@@ -48,7 +47,6 @@ export default function App() {
   const [notifSettingsModalOpen, setNotifSettingsModalOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // Floating Toast State for Push Notifications
   const [toast, setToast] = useState<{
     id: string;
     title: string;
@@ -57,28 +55,55 @@ export default function App() {
     linkView?: string;
   } | null>(null);
 
-  // Verifica persistência de sessão ativa ao carregar a aplicação
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        // Adapta propriedades essenciais legadas que a UI espera usando os dados do Supabase
+  // Função interna para buscar dados estendidos do perfil no banco do Supabase
+  const fetchUserProfile = async (supabaseUser: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', supabaseUser.id)
+        .single();
+
+      if (data && !error) {
         setUser({
-          ...session.user,
-          name: session.user.email?.split('@')[0], // Nome amigável temporário
-          role: 'ADMIN', // Nível de acesso temporário padrão para testes de tela
+          id: supabaseUser.id,
+          email: supabaseUser.email,
+          name: data.name,
+          role: data.role || 'USER',
+          department: data.department || 'Geral',
+          ramal: data.ramal || 'S/R',
+          photoUrl: data.avatar_url || null
+        });
+      } else {
+        // Fallback caso a tabela profiles não tenha o registro ainda
+        setUser({
+          id: supabaseUser.id,
+          email: supabaseUser.email,
+          name: supabaseUser.email?.split('@')[0],
+          role: 'USER',
+          department: 'Não Atribuído',
+          ramal: '---'
         });
       }
-      setLoading(false);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    // 1. Checa sessão ativa ao inicializar
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        fetchUserProfile(session.user).then(() => setLoading(false));
+      } else {
+        setLoading(false);
+      }
     });
 
-    // Escuta mudanças de estado na autenticação (Sign In / Sign Out)
+    // 2. Escuta eventos reais de login e logout globais
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        setUser({
-          ...session.user,
-          name: session.user.email?.split('@')[0],
-          role: 'ADMIN',
-        });
+        fetchUserProfile(session.user);
       } else {
         setUser(null);
       }
@@ -112,11 +137,7 @@ export default function App() {
   }, [toast]);
 
   const handleLoginSuccess = (supabaseUser: any) => {
-    setUser({
-      ...supabaseUser,
-      name: supabaseUser.email?.split('@')[0],
-      role: 'ADMIN',
-    });
+    fetchUserProfile(supabaseUser);
     setActiveView('dashboard');
   };
 
@@ -125,7 +146,6 @@ export default function App() {
     setUser(null);
   };
 
-  // Exibe tela de carregamento sutil para evitar piscar o login na tela
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
@@ -140,8 +160,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors">
-      
-      {/* Header Bar */}
       <Header
         currentUser={currentUser}
         onLogout={handleLogout}
@@ -154,7 +172,6 @@ export default function App() {
       />
 
       <div className="flex flex-1 relative overflow-hidden">
-        {/* Sidebar Navigation */}
         <Sidebar
           activeView={activeView}
           onNavigate={(view) => setActiveView(view)}
@@ -162,7 +179,6 @@ export default function App() {
           isOpen={sidebarOpen}
         />
 
-        {/* Main Workspace Area */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 min-h-[calc(100vh-4rem)]">
           {activeView === 'dashboard' && (
             <DashboardView
@@ -179,39 +195,12 @@ export default function App() {
             />
           )}
 
-          {activeView === 'quicklinks' && (
-            <QuickLinksView
-              currentUser={currentUser}
-            />
-          )}
-
-          {activeView === 'documents' && (
-            <DocumentLibraryView
-              currentUser={currentUser}
-            />
-          )}
-
-          {activeView === 'calendar' && (
-            <CalendarView
-              currentUser={currentUser}
-            />
-          )}
-
-          {activeView === 'phonebook' && (
-            <PhoneBookView
-              currentUser={currentUser}
-            />
-          )}
-
-          {activeView === 'chat' && (
-            <ChatView
-              currentUser={currentUser}
-            />
-          )}
-
-          {activeView === 'tickets' && (
-            <TicketsView currentUser={currentUser} />
-          )}
+          {activeView === 'quicklinks' && <QuickLinksView currentUser={currentUser} />}
+          {activeView === 'documents' && <DocumentLibraryView currentUser={currentUser} />}
+          {activeView === 'calendar' && <CalendarView currentUser={currentUser} />}
+          {activeView === 'phonebook' && <PhoneBookView currentUser={currentUser} />}
+          {activeView === 'chat' && <ChatView currentUser={currentUser} />}
+          {activeView === 'tickets' && <TicketsView currentUser={currentUser} />}
 
           {activeView === 'bookings' && (
             <div className="max-w-7xl mx-auto space-y-6">
@@ -229,13 +218,8 @@ export default function App() {
             </div>
           )}
 
-          {activeView === 'hrportal' && (
-            <HrPortalView currentUser={currentUser} />
-          )}
-
-          {activeView === 'polls' && (
-            <PollsView currentUser={currentUser} />
-          )}
+          {activeView === 'hrportal' && <HrPortalView currentUser={currentUser} />}
+          {activeView === 'polls' && <PollsView currentUser={currentUser} />}
 
           {activeView === 'wiki' && (
             <div className="max-w-7xl mx-auto space-y-6">
