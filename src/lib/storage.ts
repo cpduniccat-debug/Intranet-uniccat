@@ -463,6 +463,24 @@ export const saveUser = (user: UserProfile): void => {
   syncProfileToSupabase(userToSave);
 };
 
+export const saveUsersBatch = (usersBatch: UserProfile[]): void => {
+  const users = getUsers();
+  usersBatch.forEach(user => {
+    const idx = users.findIndex(u => u.id === user.id || u.email.toLowerCase().trim() === user.email.toLowerCase().trim());
+    const userToSave = {
+      ...user,
+      password: user.password || 'uni@123'
+    };
+    if (idx >= 0) {
+      users[idx] = userToSave;
+    } else {
+      users.push(userToSave);
+    }
+    syncProfileToSupabase(userToSave);
+  });
+  setStored(STORAGE_KEYS.USERS, users);
+};
+
 export const updateUserPassword = (userId: string, newPassword: string): void => {
   const users = getUsers();
   const item = users.find(u => u.id === userId);

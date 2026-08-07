@@ -31,11 +31,11 @@ import {
   Upload
 } from 'lucide-react';
 import { UserProfile, Role, Department, AuditLog } from '../../types';
-import { getUsers, saveUser, deleteUser, getAuditLogs, addAuditLog, syncAllLocalDataToSupabase, getLastSupabaseError } from '../../lib/storage';
+import { getUsers, saveUser, saveUsersBatch, deleteUser, getAuditLogs, addAuditLog, syncAllLocalDataToSupabase, getLastSupabaseError } from '../../lib/storage';
 import { isSupabaseConfigured, testSupabaseConnection, SupabaseTestResult, supabaseUrl, supabaseAnonKey } from '../../lib/supabaseClient';
 import { UNICCAT_SUPABASE_UNBLOCK_RLS_SQL } from '../../lib/sqlSchema';
 import { TicketsView } from './TicketsView';
-import { Copy, Download, CloudUpload, ShieldAlert, FileSpreadsheet } from 'lucide-react';
+import { Copy, Download, CloudUpload, ShieldAlert, FileSpreadsheet, FileUp, FileText } from 'lucide-react';
 import { exportToCSV } from '../../lib/exportUtils';
 
 
@@ -98,7 +98,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ currentUser, onOpenSqlModa
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    password: 'UNiccat@2026',
+    password: 'uni@123',
     role: 'Funcionário' as Role,
     department: 'Medicina Ocupacional' as Department,
     phone: '(11) 3300-1000',
@@ -226,6 +226,142 @@ export const AdminView: React.FC<AdminViewProps> = ({ currentUser, onOpenSqlModa
     exportToCSV('logs_auditoria_seguranca_uniccat', headers, rows);
   };
 
+  // Batch User Import Modal State
+  const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
+  const [batchRawText, setBatchRawText] = useState('');
+  const [batchError, setBatchError] = useState('');
+  const [batchSuccess, setBatchSuccess] = useState('');
+  const batchFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDownloadTemplateCSV = () => {
+    const headers = ['Nome', 'Email', 'Cargo', 'Departamento', 'Ramal', 'Telefone', 'Celular', 'Localizacao'];
+    const sampleRows = [
+      ['Ana Paula Souza', 'ana.souza@uniccat.com.br', 'Funcionário', 'Medicina Ocupacional', '101', '(11) 3300-1001', '(11) 99111-2233', 'Sede Principal - SP'],
+      ['Carlos Eduardo Mendes', 'carlos.mendes@uniccat.com.br', 'Gestor', 'TI / Sistemas', '102', '(11) 3300-1002', '(11) 99222-3344', 'Sede Principal - SP'],
+      ['Mariana Lima Santos', 'mariana.lima@uniccat.com.br', 'RH', 'Recursos Humanos / DP', '103', '(11) 3300-1003', '(11) 99333-4455', 'Filial Alphaville - SP'],
+      ['Roberto Alves Silva', 'roberto.alves@uniccat.com.br', 'Financeiro', 'Financeiro / Contabilidade', '104', '(11) 3300-1004', '(11) 99444-5566', 'Sede Principal - SP']
+    ];
+    exportToCSV('modelo_importacao_usuarios_uniccat', headers, sampleRows);
+  };
+
+  const parseUsersFromInput = (rawText: string): UserProfile[] => {
+    const trimmed = rawText.trim();
+    if (!trimmed) return [];
+
+    let rawList: any[] = [];
+
+    // JSON format check
+    if ((trimmed.startsWith('[') && trimmed.endsWith(']')) || (trimmed.startsWith('{') && trimmed.endsWith('}'))) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        rawList = Array.isArray(parsed) ? parsed : [parsed];
+      } catch {
+        // Fallback to CSV
+      }
+    }
+
+    if (rawList.length === 0) {
+      // CSV format (lines separated by comma or semicolon)
+      const lines = trimmed.split(/\r?\n/).filter(line => line.trim().length > 0);
+      if (lines.length === 0) return [];
+
+      const firstLine = lines[0];
+      const sep = firstLine.includes(';') ? ';' : ',';
+
+      let startIdx = 0;
+      if (firstLine.toLowerCase().includes('nome') || firstLine.toLowerCase().includes('email')) {
+        startIdx = 1;
+      }
+
+      for (let i = startIdx; i < lines.length; i++) {
+        const parts = lines[i].split(sep).map(p => p.trim().replace(/^["']|["']$/g, ''));
+        if (parts.length < 2) continue;
+
+        const [name, email, role, department, extension, phone, mobile, location] = parts;
+        if (!name || !email) continue;
+
+        rawList.push({
+          name,
+          email,
+          role,
+          department,
+          extension,
+          phone,
+          mobile,
+          location
+        });
+      }
+    }
+
+    // Convert raw parsed objects to valid UserProfile items
+    return rawList.map((item, idx) => {
+      const name = (item.name || item.Nome || 'Novo Colaborador').trim();
+      const email = (item.email || item.Email || item['E-mail'] || `usuario${idx + 1}@uniccat.com.br`).trim();
+      const role: Role = ROLES.includes(item.role || item.Cargo) ? (item.role || item.Cargo) : 'Funcionário';
+      const department: Department = DEPARTMENTS.includes(item.department || item.Departamento) 
+        ? (item.department || item.Departamento) 
+        : 'Medicina Ocupacional';
+
+      return {
+        id: `u-batch-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 4)}`,
+        name,
+        email,
+        password: item.password || 'uni@123',
+        role,
+        department,
+        extension: item.extension || item.Ramal || Math.floor(100 + Math.random() * 800).toString(),
+        phone: item.phone || item.Telefone || '(11) 3300-1000',
+        mobile: item.mobile || item.Celular || '(11) 9' + Math.floor(10000000 + Math.random() * 90000000),
+        photoUrl: PRESET_AVATARS[idx % PRESET_AVATARS.length],
+        location: item.location || item.Localizacao || item.Localização || 'Sede Principal - SP',
+        birthDate: '1992-06-15',
+        hireDate: new Date().toISOString().split('T')[0],
+        bio: 'Colaborador importado automaticamente via lote de cadastro.',
+        active: true
+      };
+    });
+  };
+
+  const handleBatchFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      if (content) {
+        setBatchRawText(content);
+        setBatchSuccess(`Arquivo "${file.name}" carregado com sucesso!`);
+      }
+    };
+    reader.onerror = () => {
+      setBatchError('Erro ao carregar arquivo de texto/CSV.');
+    };
+    reader.readAsText(file);
+  };
+
+  const handleExecuteBatchImport = () => {
+    setBatchError('');
+    setBatchSuccess('');
+
+    const parsedUsers = parseUsersFromInput(batchRawText);
+    if (parsedUsers.length === 0) {
+      setBatchError('Nenhum usuário válido encontrado no texto/arquivo. Verifique se o formato possui ao menos "Nome" e "Email".');
+      return;
+    }
+
+    saveUsersBatch(parsedUsers);
+    addAuditLog(currentUser, 'IMPORTACAO_LOTE_USUARIOS', `Importou em lote ${parsedUsers.length} usuários para a Intranet.`);
+    loadData();
+
+    setBatchSuccess(`Sucesso! ${parsedUsers.length} colaborador(es) cadastrado(s) e integrados com sucesso na Intranet.`);
+    setTimeout(() => {
+      setIsBatchModalOpen(false);
+      setBatchRawText('');
+      setBatchSuccess('');
+    }, 2000);
+  };
+
   useEffect(() => {
     loadData();
     const handleStorageUpdate = () => loadData();
@@ -238,7 +374,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ currentUser, onOpenSqlModa
     setFormData({
       name: '',
       email: '',
-      password: 'UNiccat@2026',
+      password: 'uni@123',
       role: 'Funcionário',
       department: 'Medicina Ocupacional',
       phone: '(11) 3300-1000',
@@ -262,7 +398,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ currentUser, onOpenSqlModa
     setFormData({
       name: user.name,
       email: user.email,
-      password: user.password || 'UNiccat@2026',
+      password: user.password || 'uni@123',
       role: user.role,
       department: user.department,
       phone: user.phone || '(11) 3300-1000',
@@ -427,12 +563,25 @@ export const AdminView: React.FC<AdminViewProps> = ({ currentUser, onOpenSqlModa
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           <button
             onClick={openCreateModal}
             className="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow-sm transition"
           >
-            <UserPlus className="w-4 h-4" /> Criar Novo Usuário
+            <UserPlus className="w-4 h-4" /> Criar Usuário Único
+          </button>
+
+          <button
+            onClick={() => {
+              setBatchRawText('');
+              setBatchError('');
+              setBatchSuccess('');
+              setIsBatchModalOpen(true);
+            }}
+            className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow-sm transition"
+            title="Importar múltiplos colaboradores de uma só vez (CSV / Excel / JSON)"
+          >
+            <FileUp className="w-4 h-4" /> Importar em Lote (CSV)
           </button>
 
           <button
@@ -1230,6 +1379,173 @@ export const AdminView: React.FC<AdminViewProps> = ({ currentUser, onOpenSqlModa
               </div>
 
             </form>
+
+          </div>
+        </div>
+      )}
+
+      {/* BATCH USER IMPORT MODAL */}
+      {isBatchModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 rounded-xl">
+                  <FileUp className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 dark:text-white text-base">Importação Automática de Usuários em Lote</h3>
+                  <p className="text-xs text-slate-500">Cadastre múltiplos colaboradores de uma só vez colando dados em CSV/JSON ou enviando arquivo.</p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setIsBatchModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto space-y-5 text-xs">
+              
+              {/* Notification Banners */}
+              {batchError && (
+                <div className="p-3.5 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900/50 rounded-xl text-rose-700 dark:text-rose-300 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{batchError}</span>
+                </div>
+              )}
+
+              {batchSuccess && (
+                <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-900/50 rounded-xl text-emerald-700 dark:text-emerald-300 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  <span className="font-bold">{batchSuccess}</span>
+                </div>
+              )}
+
+              {/* Action Toolbar */}
+              <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl">
+                <div>
+                  <h4 className="font-bold text-slate-900 dark:text-white">Opção 1: Baixar Planilha Modelo (.csv)</h4>
+                  <p className="text-[11px] text-slate-500">Baixe o modelo pré-formatado com os cabeçalhos das colunas para preencher no Excel.</p>
+                </div>
+
+                <button
+                  onClick={handleDownloadTemplateCSV}
+                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs transition flex items-center gap-1.5 shadow-xs"
+                >
+                  <Download className="w-4 h-4" /> Baixar Modelo CSV
+                </button>
+              </div>
+
+              {/* File upload or text paste */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <FileText className="w-4 h-4 text-blue-600" />
+                    <span>Opção 2: Cole o Texto em Formato CSV ou Envie o Arquivo</span>
+                  </label>
+
+                  <input
+                    ref={batchFileInputRef}
+                    type="file"
+                    accept=".csv,.txt,.json"
+                    onChange={handleBatchFileUpload}
+                    className="hidden"
+                  />
+
+                  <button
+                    onClick={() => batchFileInputRef.current?.click()}
+                    className="px-3 py-1.5 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900 text-blue-700 dark:text-blue-300 font-bold border border-blue-200 dark:border-blue-800 rounded-lg text-xs transition flex items-center gap-1.5"
+                  >
+                    <Upload className="w-3.5 h-3.5" /> Enviar Arquivo .CSV / .TXT
+                  </button>
+                </div>
+
+                <textarea
+                  value={batchRawText}
+                  onChange={e => {
+                    setBatchRawText(e.target.value);
+                    setBatchError('');
+                    setBatchSuccess('');
+                  }}
+                  rows={6}
+                  placeholder={`Cole aqui a lista de usuários em CSV ou JSON. Exemplo CSV:\nNome,Email,Cargo,Departamento,Ramal,Telefone,Celular,Localizacao\nJuliana Costa,juliana.costa@uniccat.com.br,Funcionário,Medicina Ocupacional,105,(11) 3300-1005,(11) 98888-1122,Sede Principal - SP\nFernando Lima,fernando.lima@uniccat.com.br,Gestor,TI / Sistemas,106,(11) 3300-1006,(11) 98888-3344,Sede Principal - SP`}
+                  className="w-full p-3 font-mono text-[11px] bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Live Preview of parsed users */}
+              {batchRawText.trim().length > 0 && (
+                <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-900 dark:text-white">
+                      Pré-visualização dos Usuários Detectados: ({parseUsersFromInput(batchRawText).length})
+                    </span>
+                    <span className="text-[10px] text-slate-500">
+                      Senha padrão gerada: <strong className="text-slate-700 dark:text-slate-300 font-mono">uni@123</strong>
+                    </span>
+                  </div>
+
+                  <div className="max-h-48 overflow-y-auto border border-slate-200 dark:border-slate-800 rounded-xl overflow-x-auto">
+                    <table className="w-full text-left text-[11px]">
+                      <thead className="bg-slate-100 dark:bg-slate-950 text-slate-500 font-bold">
+                        <tr>
+                          <th className="p-2">#</th>
+                          <th className="p-2">Nome</th>
+                          <th className="p-2">E-mail</th>
+                          <th className="p-2">Cargo</th>
+                          <th className="p-2">Departamento</th>
+                          <th className="p-2">Ramal</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {parseUsersFromInput(batchRawText).map((u, i) => (
+                          <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-950">
+                            <td className="p-2 font-mono text-slate-400">{i + 1}</td>
+                            <td className="p-2 font-bold text-slate-900 dark:text-white">{u.name}</td>
+                            <td className="p-2 text-slate-600 dark:text-slate-400">{u.email}</td>
+                            <td className="p-2 text-slate-600 dark:text-slate-400">{u.role}</td>
+                            <td className="p-2 text-slate-600 dark:text-slate-400">{u.department}</td>
+                            <td className="p-2 text-slate-600 dark:text-slate-400 font-mono">{u.extension}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
+              <span className="text-[11px] text-slate-500">
+                Os usuários criados serão vinculados automaticamente à Intranet e Supabase.
+              </span>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsBatchModalOpen(false)}
+                  className="px-4 py-2 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs hover:bg-slate-300 transition"
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  onClick={handleExecuteBatchImport}
+                  disabled={parseUsersFromInput(batchRawText).length === 0}
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold rounded-xl text-xs shadow-xs transition flex items-center gap-2"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Cadastrar e Importar Todos ({parseUsersFromInput(batchRawText).length})</span>
+                </button>
+              </div>
+            </div>
 
           </div>
         </div>
