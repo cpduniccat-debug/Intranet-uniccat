@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
 const metaEnv = (import.meta as any).env || {};
-export const supabaseUrl = metaEnv.VITE_SUPABASE_URL || 'https://ezpytjuamjbbihlmexxw.supabase.co';
-export const supabaseAnonKey = metaEnv.VITE_SUPABASE_ANON_KEY || 'sb_publishable_jzzv-CHLz8xZwOcyj6Z4Ag_Q5H3pA1m';
+export const supabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL || '';
+export const supabaseAnonKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY || '';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
