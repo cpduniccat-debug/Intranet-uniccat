@@ -782,6 +782,38 @@ export const votePoll = (pollId: string, optionId: string, userId: string): void
   }
 };
 
+export const addPoll = (poll: Poll): void => {
+  const items = getPolls();
+  items.unshift(poll);
+  setStored(STORAGE_KEYS.POLLS, items);
+};
+
+export const updatePoll = (updated: Poll): void => {
+  const items = getPolls();
+  const index = items.findIndex(p => p.id === updated.id);
+  if (index >= 0) {
+    items[index] = updated;
+    setStored(STORAGE_KEYS.POLLS, items);
+  }
+};
+
+export const deletePoll = (pollId: string): void => {
+  const items = getPolls().filter(p => p.id !== pollId);
+  setStored(STORAGE_KEYS.POLLS, items);
+};
+
+export const submitGoogleFormResponse = (pollId: string, userId: string): void => {
+  const items = getPolls();
+  const poll = items.find(p => p.id === pollId);
+  if (poll) {
+    if (!poll.votedUserIds.includes(userId)) {
+      poll.votedUserIds.push(userId);
+    }
+    poll.responsesCount = (poll.responsesCount || 0) + 1;
+    setStored(STORAGE_KEYS.POLLS, items);
+  }
+};
+
 // Wiki
 export const getWiki = (): WikiArticle[] => getStored(STORAGE_KEYS.WIKI, INITIAL_WIKI);
 

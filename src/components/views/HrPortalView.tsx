@@ -20,8 +20,11 @@ import {
   Briefcase,
   FileText,
   ExternalLink,
-  Users
+  Users,
+  FileSpreadsheet,
+  Download
 } from 'lucide-react';
+import { exportToCSV, printFormattedReport } from '../../lib/exportUtils';
 import { UserProfile, VacationNotice, VacationStatus, Department } from '../../types';
 import { 
   getVacationNotices, 
@@ -312,6 +315,48 @@ export const HrPortalView: React.FC<HrPortalViewProps> = ({ currentUser }) => {
     return dateStr;
   };
 
+  const handleExportVacationsCSV = () => {
+    const headers = [
+      'Colaborador', 'Setor / Departamento', 'Cargo', 'Data Início', 'Data Término',
+      'Total Dias', 'Status Férias', 'Substituto de Cobertura', 'Contato Substituto', 'Observações'
+    ];
+
+    const rows = filteredVacations.map(v => [
+      v.employeeName,
+      v.department,
+      v.role,
+      formatDateString(v.startDate),
+      formatDateString(v.endDate),
+      v.daysCount,
+      v.status,
+      v.substituteName || 'Nenhum',
+      v.substitutePhone || 'N/A',
+      v.notes || ''
+    ]);
+
+    exportToCSV('escala_ferias_uniccat', headers, rows);
+  };
+
+  const handlePrintVacationsReport = () => {
+    const headers = ['Colaborador', 'Departamento', 'Cargo', 'Período', 'Dias', 'Status', 'Substituto'];
+    const rows = filteredVacations.map(v => [
+      v.employeeName,
+      v.department,
+      v.role,
+      `${formatDateString(v.startDate)} a ${formatDateString(v.endDate)}`,
+      v.daysCount,
+      v.status,
+      v.substituteName || 'Nenhum'
+    ]);
+
+    printFormattedReport(
+      'Relatório Corporativo de Escala de Férias & Ausências RH',
+      `Filtro Setor: ${selectedDept} | Status: ${selectedStatus}`,
+      headers,
+      rows
+    );
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       
@@ -337,11 +382,20 @@ export const HrPortalView: React.FC<HrPortalViewProps> = ({ currentUser }) => {
 
           <div className="flex flex-wrap items-center gap-3">
             <button
-              onClick={() => window.print()}
+              onClick={handleExportVacationsCSV}
+              className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-xs transition flex items-center gap-2 text-xs"
+              title="Exportar planilha Excel de escala de férias"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              <span>Exportar Excel (CSV)</span>
+            </button>
+
+            <button
+              onClick={handlePrintVacationsReport}
               className="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl border border-white/20 transition flex items-center gap-2 text-xs shadow-xs"
             >
               <Printer className="w-4 h-4" />
-              <span>Imprimir / Exportar Mural</span>
+              <span>Imprimir / PDF</span>
             </button>
 
             {canManage && (

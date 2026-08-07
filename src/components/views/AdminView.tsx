@@ -35,7 +35,8 @@ import { getUsers, saveUser, deleteUser, getAuditLogs, addAuditLog, syncAllLocal
 import { isSupabaseConfigured, testSupabaseConnection, SupabaseTestResult, supabaseUrl, supabaseAnonKey } from '../../lib/supabaseClient';
 import { UNICCAT_SUPABASE_UNBLOCK_RLS_SQL } from '../../lib/sqlSchema';
 import { TicketsView } from './TicketsView';
-import { Copy, Download, CloudUpload, ShieldAlert } from 'lucide-react';
+import { Copy, Download, CloudUpload, ShieldAlert, FileSpreadsheet } from 'lucide-react';
+import { exportToCSV } from '../../lib/exportUtils';
 
 
 interface AdminViewProps {
@@ -186,6 +187,43 @@ export const AdminView: React.FC<AdminViewProps> = ({ currentUser, onOpenSqlModa
   const loadData = () => {
     setUsers(getUsers());
     setAuditLogs(getAuditLogs());
+  };
+
+  const handleExportUsersCSV = () => {
+    const headers = [
+      'ID', 'Nome', 'E-mail', 'Cargo', 'Departamento',
+      'Ramal', 'Telefone', 'Celular', 'Localização', 'Status Ativo', 'Data Admissão'
+    ];
+
+    const rows = filteredUsers.map(u => [
+      u.id,
+      u.name,
+      u.email,
+      u.role,
+      u.department,
+      u.extension || '',
+      u.phone || '',
+      u.mobile || '',
+      u.location || '',
+      u.active ? 'Ativo' : 'Inativo',
+      u.hireDate || ''
+    ]);
+
+    exportToCSV('usuarios_colaboradores_uniccat', headers, rows);
+  };
+
+  const handleExportAuditLogsCSV = () => {
+    const headers = ['ID Registro', 'Data / Hora', 'Usuário', 'Ação / Evento', 'Detalhes da Operação', 'IP Origem'];
+    const rows = auditLogs.map(l => [
+      l.id,
+      l.timestamp,
+      l.userName,
+      l.action,
+      l.details,
+      l.ipAddress || '127.0.0.1'
+    ]);
+
+    exportToCSV('logs_auditoria_seguranca_uniccat', headers, rows);
   };
 
   useEffect(() => {
@@ -517,54 +555,66 @@ export const AdminView: React.FC<AdminViewProps> = ({ currentUser, onOpenSqlModa
           <div className="p-6 space-y-6">
             
             {/* Filter controls */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-slate-50 dark:bg-slate-950/60 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-              
-              {/* Search */}
-              <div className="relative">
-                <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="Buscar por nome, e-mail, ramal..."
-                  className="w-full pl-9 pr-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs"
-                />
+            <div className="space-y-3 bg-slate-50 dark:bg-slate-950/60 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {/* Search */}
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    placeholder="Buscar por nome, e-mail, ramal..."
+                    className="w-full pl-9 pr-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs"
+                  />
+                </div>
+
+                {/* Department */}
+                <select
+                  value={selectedDepartment}
+                  onChange={e => setSelectedDepartment(e.target.value)}
+                  className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300"
+                >
+                  <option value="all">Todos os Departamentos</option>
+                  {DEPARTMENTS.map(dept => (
+                    <option key={dept} value={dept}>{dept}</option>
+                  ))}
+                </select>
+
+                {/* Role */}
+                <select
+                  value={selectedRole}
+                  onChange={e => setSelectedRole(e.target.value)}
+                  className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300"
+                >
+                  <option value="all">Todos os Cargos</option>
+                  {ROLES.map(role => (
+                    <option key={role} value={role}>{role}</option>
+                  ))}
+                </select>
+
+                {/* Status */}
+                <select
+                  value={selectedStatus}
+                  onChange={e => setSelectedStatus(e.target.value as any)}
+                  className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300"
+                >
+                  <option value="all">Status: Todos</option>
+                  <option value="active">Somente Ativos</option>
+                  <option value="inactive">Somente Inativos</option>
+                </select>
               </div>
 
-              {/* Department */}
-              <select
-                value={selectedDepartment}
-                onChange={e => setSelectedDepartment(e.target.value)}
-                className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300"
-              >
-                <option value="all">Todos os Departamentos</option>
-                {DEPARTMENTS.map(dept => (
-                  <option key={dept} value={dept}>{dept}</option>
-                ))}
-              </select>
-
-              {/* Role */}
-              <select
-                value={selectedRole}
-                onChange={e => setSelectedRole(e.target.value)}
-                className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300"
-              >
-                <option value="all">Todos os Cargos</option>
-                {ROLES.map(role => (
-                  <option key={role} value={role}>{role}</option>
-                ))}
-              </select>
-
-              {/* Status */}
-              <select
-                value={selectedStatus}
-                onChange={e => setSelectedStatus(e.target.value as any)}
-                className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300"
-              >
-                <option value="all">Status: Todos</option>
-                <option value="active">Somente Ativos</option>
-                <option value="inactive">Somente Inativos</option>
-              </select>
+              <div className="flex justify-end pt-1">
+                <button
+                  onClick={handleExportUsersCSV}
+                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs transition flex items-center gap-1.5 shadow-xs"
+                  title="Exportar lista de usuários para Excel (CSV)"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                  <span>Exportar Usuários (CSV)</span>
+                </button>
+              </div>
             </div>
 
             {/* User List Table */}
@@ -684,10 +734,21 @@ export const AdminView: React.FC<AdminViewProps> = ({ currentUser, onOpenSqlModa
         {/* TAB 2: AUDIT LOGS */}
         {activeTab === 'audit' && (
           <div className="p-6 space-y-4">
-            <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-              <Activity className="w-4 h-4 text-blue-600" />
-              <span>Registro Contínuo de Auditoria e Segurança (Supabase RLS)</span>
-            </h3>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                <Activity className="w-4 h-4 text-blue-600" />
+                <span>Registro Contínuo de Auditoria e Segurança (Supabase RLS)</span>
+              </h3>
+
+              <button
+                onClick={handleExportAuditLogsCSV}
+                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs transition flex items-center gap-1.5 shadow-xs"
+                title="Exportar logs de auditoria para Excel (CSV)"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                <span>Exportar Logs (CSV)</span>
+              </button>
+            </div>
 
             <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
               <table className="w-full text-left text-xs">

@@ -17,8 +17,11 @@ import {
   Building2,
   HelpCircle,
   XCircle,
-  RefreshCw
+  RefreshCw,
+  FileSpreadsheet,
+  Download
 } from 'lucide-react';
+import { exportToCSV, printFormattedReport } from '../../lib/exportUtils';
 import { 
   ResponsiveContainer, 
   PieChart, 
@@ -193,6 +196,54 @@ export const TicketSlaReport: React.FC<TicketSlaReportProps> = ({ tickets, onRef
     'Com Atraso': item.breached
   }));
 
+  // Export handlers
+  const handleExportFullCSV = () => {
+    const headers = [
+      'ID Chamado', 'Código GLPI', 'Título', 'Solicitante', 'Departamento',
+      'Categoria', 'Prioridade', 'Data Criação', 'Status Chamado',
+      'Tempo Atendimento (Horas)', 'Meta SLA (Horas)', 'Status SLA', 'Técnico Responsável'
+    ];
+
+    const rows = processedTickets.map(t => [
+      t.id,
+      t.glpiTicketId || 'N/A',
+      t.title,
+      t.requesterName,
+      t.requesterDepartment,
+      t.category,
+      t.priority,
+      t.createdAt,
+      t.status,
+      t.durationHours,
+      t.targetHours,
+      t.slaStatus === 'within' ? 'Dentro do SLA (Concluído)' :
+      t.slaStatus === 'pending_ok' ? 'Dentro do SLA (Em Andamento)' :
+      t.slaStatus === 'breached' ? 'SLA Fora do Prazo (Concluído)' : 'SLA Fora do Prazo (Pendente)',
+      t.assignedToName || 'Não Atribuído'
+    ]);
+
+    exportToCSV('relatorio_sla_atendimento_uniccat', headers, rows);
+  };
+
+  const handlePrintPdf = () => {
+    const headers = ['Prioridade', 'Meta SLA', 'Total Chamados', 'No Prazo', 'Fora do Prazo', 'Conformidade (%)'];
+    const rows = priorityData.map(p => [
+      p.prioridade,
+      p['SLA Alvo'],
+      p['Dentro do SLA'] + p['Fora do SLA'],
+      p['Dentro do SLA'],
+      p['Fora do SLA'],
+      `${p['Taxa de Sucesso (%)']}%`
+    ]);
+
+    printFormattedReport(
+      'Relatório Corporativo de Eficiência & SLA de TI',
+      `Filtro: ${periodFilter === 'all' ? 'Histórico Geral' : periodFilter === '30days' ? 'Últimos 30 Dias' : 'Mês Atual'} | Categoria: ${categoryFilter}`,
+      headers,
+      rows
+    );
+  };
+
   return (
     <div className="space-y-6">
       
@@ -214,8 +265,17 @@ export const TicketSlaReport: React.FC<TicketSlaReportProps> = ({ tickets, onRef
 
           <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={() => window.print()}
-              className="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl border border-white/20 text-xs transition flex items-center gap-2 shadow-xs"
+              onClick={handleExportFullCSV}
+              className="px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition flex items-center gap-2 shadow-xs"
+              title="Exportar planilha Excel / CSV dos chamados e prazos SLA"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              <span>Exportar Excel (CSV)</span>
+            </button>
+            <button
+              onClick={handlePrintPdf}
+              className="px-3.5 py-2.5 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl border border-white/20 text-xs transition flex items-center gap-2 shadow-xs"
+              title="Gerar visualização para impressão ou salvamento em PDF"
             >
               <Printer className="w-4 h-4" />
               <span>Exportar PDF / Imprimir</span>
@@ -557,7 +617,7 @@ export const TicketSlaReport: React.FC<TicketSlaReportProps> = ({ tickets, onRef
 
       {/* Target SLA Reference Table & Summary */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
           <div>
             <h3 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2">
               <FileText className="w-4 h-4 text-blue-600" />
@@ -565,6 +625,25 @@ export const TicketSlaReport: React.FC<TicketSlaReportProps> = ({ tickets, onRef
             </h3>
             <p className="text-xs text-slate-500">Parâmetros de atendimento vigentes para a Infraestrutura e Sistemas da UNICCAT</p>
           </div>
+
+          <button
+            onClick={() => {
+              const headers = ['Nível de Prioridade', 'SLA Alvo Solução', 'Total Chamados', 'Resolvidos no Prazo', 'Fora do Prazo', 'Taxa de Conformidade (%)'];
+              const rows = priorityData.map(item => [
+                item.prioridade,
+                item['SLA Alvo'],
+                item['Dentro do SLA'] + item['Fora do SLA'],
+                item['Dentro do SLA'],
+                item['Fora do SLA'],
+                `${item['Taxa de Sucesso (%)']}%`
+              ]);
+              exportToCSV('metas_sla_por_prioridade', headers, rows);
+            }}
+            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-bold transition flex items-center gap-1.5 self-start sm:self-auto shrink-0"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Exportar Tabela (CSV)</span>
+          </button>
         </div>
 
         <div className="overflow-x-auto">

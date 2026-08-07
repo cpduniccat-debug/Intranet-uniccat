@@ -446,46 +446,68 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {/* Active Poll Widget */}
           {activePoll && (
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm space-y-4">
-              <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400 font-bold text-xs uppercase tracking-wider">
-                <Vote className="w-4 h-4" />
-                <span>Enquete Corporativa</span>
+              <div className="flex items-center justify-between text-blue-700 dark:text-blue-400 font-bold text-xs uppercase tracking-wider">
+                <div className="flex items-center gap-2">
+                  <Vote className="w-4 h-4 text-purple-600" />
+                  <span>{activePoll.type === 'google_forms' ? 'Google Forms Integrado' : 'Enquete Corporativa'}</span>
+                </div>
+                <span className="text-[10px] text-slate-400 font-normal border border-slate-200 dark:border-slate-800 px-2 py-0.5 rounded-full">
+                  {activePoll.category}
+                </span>
               </div>
 
               <h3 className="font-bold text-sm text-slate-900 dark:text-white leading-snug">
                 {activePoll.question}
               </h3>
 
-              <div className="space-y-2">
-                {activePoll.options.map(opt => {
-                  const hasVoted = activePoll.votedUserIds.includes(currentUser.id);
-                  const totalVotes = activePoll.options.reduce((sum, o) => sum + o.votes, 0);
-                  const percentage = totalVotes > 0 ? Math.round((opt.votes / totalVotes) * 100) : 0;
+              {activePoll.options && activePoll.options.length > 0 ? (
+                <div className="space-y-2">
+                  {activePoll.options.map(opt => {
+                    const hasVoted = activePoll.votedUserIds.includes(currentUser.id);
+                    const totalVotes = activePoll.options.reduce((sum, o) => sum + o.votes, 0);
+                    const percentage = totalVotes > 0 ? Math.round((opt.votes / totalVotes) * 100) : 0;
 
-                  return (
-                    <button
-                      key={opt.id}
-                      disabled={hasVoted}
-                      onClick={() => handleVote(activePoll.id, opt.id)}
-                      className={`w-full p-2.5 rounded-lg text-left border text-xs font-medium transition relative overflow-hidden ${
-                        hasVoted
-                          ? 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 cursor-default'
-                          : 'bg-slate-50 dark:bg-slate-950 hover:bg-blue-50/50 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-800 hover:border-blue-300 text-slate-800 dark:text-white'
-                      }`}
-                    >
-                      {hasVoted && (
-                        <div 
-                          className="absolute left-0 top-0 bottom-0 bg-blue-100 dark:bg-blue-950/80 border-r border-blue-300 dark:border-blue-800 transition-all duration-500"
-                          style={{ width: `${percentage}%` }}
-                        />
-                      )}
-                      <div className="relative z-10 flex items-center justify-between">
-                        <span>{opt.text}</span>
-                        {hasVoted && <span className="font-bold text-blue-700 dark:text-blue-400 text-[11px]">{percentage}%</span>}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+                    return (
+                      <button
+                        key={opt.id}
+                        disabled={hasVoted}
+                        onClick={() => handleVote(activePoll.id, opt.id)}
+                        className={`w-full p-2.5 rounded-lg text-left border text-xs font-medium transition relative overflow-hidden ${
+                          hasVoted
+                            ? 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 cursor-default'
+                            : 'bg-slate-50 dark:bg-slate-950 hover:bg-blue-50/50 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-800 hover:border-blue-300 text-slate-800 dark:text-white'
+                        }`}
+                      >
+                        {hasVoted && (
+                          <div 
+                            className="absolute left-0 top-0 bottom-0 bg-blue-100 dark:bg-blue-950/80 border-r border-blue-300 dark:border-blue-800 transition-all duration-500"
+                            style={{ width: `${percentage}%` }}
+                          />
+                        )}
+                        <div className="relative z-10 flex items-center justify-between">
+                          <span>{opt.text}</span>
+                          {hasVoted && <span className="font-bold text-blue-700 dark:text-blue-400 text-[11px]">{percentage}%</span>}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="p-4 bg-purple-50/50 dark:bg-purple-950/30 rounded-xl border border-purple-100 dark:border-purple-900/40 text-center space-y-3">
+                  <p className="text-xs text-slate-600 dark:text-slate-300">
+                    {activePoll.description || 'Pesquisa oficial do Google Forms com resposta integrada.'}
+                  </p>
+                  <button
+                    onClick={() => {
+                      const evt = new CustomEvent('navigate_view', { detail: 'polls' });
+                      window.dispatchEvent(evt);
+                    }}
+                    className="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 shadow-xs"
+                  >
+                    Responder no App (Google Forms)
+                  </button>
+                </div>
+              )}
 
               {activePoll.votedUserIds.includes(currentUser.id) && (
                 <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold text-center">

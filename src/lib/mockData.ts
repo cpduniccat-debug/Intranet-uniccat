@@ -547,14 +547,159 @@ export const INITIAL_POLLS: Poll[] = [
     question: 'Qual tema você prefere para o próximo treinamento interno da UNICCAT?',
     description: 'Sua opinião ajuda o RH a planejar as capacitações com maior impacto.',
     category: 'RH & Desenvolvimento',
+    type: 'standard',
     active: true,
     endDate: '2026-08-20',
     votedUserIds: ['usr-1', 'usr-3'],
+    authorName: 'Ana Paula Silva (RH)',
+    createdAt: '2026-08-01',
     options: [
       { id: 'opt-1', text: 'Atualização das NRs e eSocial em 2026', votes: 14 },
       { id: 'opt-2', text: 'Comunicação Não-Violenta e Atendimento ao Paciente', votes: 9 },
       { id: 'opt-3', text: 'Gestão do Tempo e Ferramentas Digitais', votes: 11 },
       { id: 'opt-4', text: 'Primeiros Socorros Avançados e RCP', votes: 18 }
+    ]
+  },
+  {
+    id: 'form-1',
+    question: 'Pesquisa Geral de Clima Organizacional UNICCAT 2026',
+    description: 'Formulário oficial do Google Forms para avaliação do ambiente de trabalho, liderança e motivação.',
+    category: 'Gestão de Pessoas',
+    type: 'google_forms',
+    googleFormUrl: 'https://docs.google.com/forms/d/e/1FAIpQLSc_EXAMPLE_CLIMA_2026/viewform?embedded=true',
+    active: true,
+    endDate: '2026-08-30',
+    votedUserIds: [],
+    options: [],
+    responsesCount: 42,
+    authorName: 'Coordenação de RH',
+    createdAt: '2026-08-02',
+    embeddedFormQuestions: [
+      {
+        id: 'q1',
+        title: 'Como você avalia a comunicação interna entre o seu setor e a diretoria?',
+        type: 'rating',
+        required: true
+      },
+      {
+        id: 'q2',
+        title: 'Você sente que possui as ferramentas necessárias para desempenhar sua função com segurança?',
+        type: 'choice',
+        options: ['Sim, totalmente', 'Parcialmente', 'Não, preciso de novos equipamentos'],
+        required: true
+      },
+      {
+        id: 'q3',
+        title: 'Sugestões de melhoria para o seu ambiente de trabalho ou setor:',
+        type: 'text',
+        required: false
+      }
+    ]
+  },
+  {
+    id: 'form-2',
+    question: 'Avaliação da Qualidade do Atendimento e Suporte de T.I.',
+    description: 'Pesquisa de satisfação quanto ao tempo de resposta dos chamados, cordialidade dos técnicos e infraestrutura de rede.',
+    category: 'Tecnologia da Informação',
+    type: 'google_forms',
+    googleFormUrl: 'https://docs.google.com/forms/d/e/1FAIpQLSc_EXAMPLE_IT_SUPPORTE/viewform?embedded=true',
+    active: true,
+    endDate: '2026-09-15',
+    votedUserIds: [],
+    options: [],
+    responsesCount: 28,
+    authorName: 'Gerência de T.I.',
+    createdAt: '2026-08-03',
+    embeddedFormQuestions: [
+      {
+        id: 'q1',
+        title: 'Como você classifica o atendimento do suporte de TI no seu último chamado?',
+        type: 'rating',
+        required: true
+      },
+      {
+        id: 'q2',
+        title: 'O seu problema com sistemas (Infomed/MedClinic) foi resolvido dentro do prazo esperado?',
+        type: 'choice',
+        options: ['Sim, rapidamente', 'Dentro do prazo normal', 'Demorou mais que o esperado', 'Não foi resolvido'],
+        required: true
+      },
+      {
+        id: 'q3',
+        title: 'Espaço aberto para elogios ou críticas construtivas ao setor de TI:',
+        type: 'text',
+        required: false
+      }
+    ]
+  },
+  {
+    id: 'tpl-1',
+    question: '[Modelo Google Forms] Pesquisa de Avaliação de Treinamentos & Capacitações',
+    description: 'Modelo pronto e padronizado para feedback de cursos, palestras e workshops na UNICCAT.',
+    category: 'RH & Desenvolvimento',
+    type: 'template',
+    isTemplate: true,
+    templateCategory: 'Capacitação',
+    googleFormUrl: 'https://docs.google.com/forms/d/e/1FAIpQLSc_EXAMPLE_MODELO_TREINAMENTO/viewform?embedded=true',
+    active: true,
+    endDate: '2026-12-31',
+    votedUserIds: [],
+    options: [],
+    responsesCount: 115,
+    authorName: 'Equipe de T&D',
+    createdAt: '2026-07-20',
+    embeddedFormQuestions: [
+      {
+        id: 'q1',
+        title: 'O conteúdo apresentado atendeu às suas expectativas profissionais?',
+        type: 'rating',
+        required: true
+      },
+      {
+        id: 'q2',
+        title: 'Como você avalia a didática e o domínio do palestrante/instrutor?',
+        type: 'rating',
+        required: true
+      },
+      {
+        id: 'q3',
+        title: 'O material de apoio disponibilizado foi útil?',
+        type: 'choice',
+        options: ['Excelente', 'Bom', 'Regular', 'Ruim / Inexistente'],
+        required: true
+      }
+    ]
+  },
+  {
+    id: 'tpl-2',
+    question: '[Modelo Google Forms] Pesquisa de Satisfação com Plano de Saúde e Benefícios',
+    description: 'Modelo para mapear o nível de aprovação dos colaboradores em relação a convênio médico, vale refeição e parcerias.',
+    category: 'Benefícios RH',
+    type: 'template',
+    isTemplate: true,
+    templateCategory: 'Benefícios',
+    googleFormUrl: 'https://docs.google.com/forms/d/e/1FAIpQLSc_EXAMPLE_MODELO_BENEFICIOS/viewform?embedded=true',
+    active: true,
+    endDate: '2026-12-31',
+    votedUserIds: [],
+    options: [],
+    responsesCount: 89,
+    authorName: 'Gestão de Benefícios',
+    createdAt: '2026-07-15',
+    embeddedFormQuestions: [
+      {
+        id: 'q1',
+        title: 'Qual benefício oferecido pela UNICCAT você mais utiliza no seu dia a dia?',
+        type: 'choice',
+        options: ['Plano de Saúde Médico/Odontológico', 'Vale Alimentação / Refeição', 'Parceria com Academias', 'Seguro de Vida'],
+        required: true
+      },
+      {
+        id: 'q2',
+        title: 'Nível de satisfação geral com a rede credenciada do plano médico:',
+        type: 'rating',
+        required: true
+      }
     ]
   }
 ];

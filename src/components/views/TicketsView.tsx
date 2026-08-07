@@ -32,8 +32,11 @@ import {
   Printer,
   FileCode2,
   RefreshCw,
-  BarChart3
+  BarChart3,
+  FileSpreadsheet,
+  Download
 } from 'lucide-react';
+import { exportToCSV } from '../../lib/exportUtils';
 import { HelpdeskTicket, UserProfile, Department } from '../../types';
 import { 
   getTickets, 
@@ -289,6 +292,29 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ currentUser }) => {
   const emAndamentoCount = tickets.filter(t => t.status === 'Em Andamento' || t.status === 'Pendente').length;
   const resolvidosCount = tickets.filter(t => t.status === 'Resolvido').length;
 
+  const handleExportTicketsListCSV = () => {
+    const headers = [
+      'Código', 'Código GLPI', 'Título / Problema', 'Solicitante', 'Departamento',
+      'Categoria TI', 'Prioridade', 'Status', 'Técnico TI', 'Data Abertura', 'Ramal'
+    ];
+
+    const rows = filteredTickets.map(t => [
+      t.id,
+      t.glpiTicketId || 'N/A',
+      t.title,
+      t.requesterName,
+      t.requesterDepartment,
+      t.category,
+      t.priority,
+      t.status,
+      t.assignedToName || 'Não Atribuído',
+      t.createdAt,
+      t.requesterExtension || ''
+    ]);
+
+    exportToCSV('chamados_suporte_uniccat', headers, rows);
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       
@@ -311,7 +337,15 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ currentUser }) => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <button
+            onClick={handleExportTicketsListCSV}
+            className="px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow-xs transition"
+            title="Exportar lista de chamados em planilha Excel (CSV)"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            <span>Exportar Chamados (CSV)</span>
+          </button>
           <button
             onClick={handleOpenCreateModal}
             className="px-4 py-2.5 bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow-sm transition"

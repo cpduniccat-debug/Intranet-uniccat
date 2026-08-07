@@ -302,6 +302,8 @@ export interface PollOption {
   votes: number;
 }
 
+export type PollType = 'standard' | 'google_forms' | 'template';
+
 export interface Poll {
   id: string;
   question: string;
@@ -311,6 +313,20 @@ export interface Poll {
   active: boolean;
   endDate: string;
   category: string;
+  type?: PollType;
+  googleFormUrl?: string;
+  isTemplate?: boolean;
+  templateCategory?: string;
+  responsesCount?: number;
+  authorName?: string;
+  createdAt?: string;
+  embeddedFormQuestions?: {
+    id: string;
+    title: string;
+    type: 'text' | 'choice' | 'rating';
+    required?: boolean;
+    options?: string[];
+  }[];
 }
 
 export interface WikiArticle {

@@ -15,6 +15,7 @@ import { AdminView } from './components/views/AdminView';
 import { TicketsView } from './components/views/TicketsView';
 import { ProfileView } from './components/views/ProfileView';
 import { HrPortalView } from './components/views/HrPortalView';
+import { PollsView } from './components/views/PollsView';
 
 import { AnnouncementDetailModal } from './components/modals/AnnouncementDetailModal';
 import { GlobalSearchModal } from './components/modals/GlobalSearchModal';
@@ -192,6 +193,10 @@ export default function App() {
 
           {activeView === 'hrportal' && (
             <HrPortalView currentUser={currentUser} />
+          )}
+
+          {activeView === 'polls' && (
+            <PollsView currentUser={currentUser} />
           )}
 
 
