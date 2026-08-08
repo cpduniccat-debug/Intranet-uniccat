@@ -1,5 +1,3 @@
-import { UserProfile, Announcement, Ticket, QuickLink, DocumentFile, Poll, AuditLog } from '../types';
-
 // Chaves do LocalStorage
 const USERS_KEY = 'uniccat_users';
 const CURRENT_USER_KEY = 'uniccat_current_user';
@@ -25,43 +23,43 @@ const setStorageItem = <T>(key: string, value: T): void => {
 };
 
 // ==========================================
-// EXPORTS REQUERIDOS PELAS VIEWS INTERNAS
+// EXPORTS REQUERIDOS PELAS VIEWS INTERNAS (GENÉRICOS)
 // ==========================================
 
-export const getUsers = (): UserProfile[] => {
-  return getStorageItem<UserProfile[]>(USERS_KEY, []);
+export const getUsers = (): any[] => {
+  return getStorageItem<any[]>(USERS_KEY, []);
 };
 
-export const getCurrentUser = (): UserProfile | null => {
-  return getStorageItem<UserProfile | null>(CURRENT_USER_KEY, null);
+export const getCurrentUser = (): any | null => {
+  return getStorageItem<any | null>(CURRENT_USER_KEY, null);
 };
 
-export const setCurrentUser = (user: UserProfile | null): void => {
+export const setCurrentUser = (user: any | null): void => {
   setStorageItem(CURRENT_USER_KEY, user);
 };
 
-export const getQuickLinks = (): QuickLink[] => {
-  return getStorageItem<QuickLink[]>(LINKS_KEY, []);
+export const getQuickLinks = (): any[] => {
+  return getStorageItem<any[]>(LINKS_KEY, []);
 };
 
-export const getAnnouncements = (): Announcement[] => {
-  return getStorageItem<Announcement[]>(ANNOUNCEMENTS_KEY, []);
+export const getAnnouncements = (): any[] => {
+  return getStorageItem<any[]>(ANNOUNCEMENTS_KEY, []);
 };
 
-export const getTickets = (): Ticket[] => {
-  return getStorageItem<Ticket[]>(TICKETS_KEY, []);
+export const getTickets = (): any[] => {
+  return getStorageItem<any[]>(TICKETS_KEY, []);
 };
 
-export const getDocuments = (): DocumentFile[] => {
-  return getStorageItem<DocumentFile[]>(DOCS_KEY, []);
+export const getDocuments = (): any[] => {
+  return getStorageItem<any[]>(DOCS_KEY, []);
 };
 
-export const getPolls = (): Poll[] => {
-  return getStorageItem<Poll[]>(POLLS_KEY, []);
+export const getPolls = (): any[] => {
+  return getStorageItem<any[]>(POLLS_KEY, []);
 };
 
-export const getAuditLogs = (): AuditLog[] => {
-  return getStorageItem<AuditLog[]>(AUDIT_LOGS_KEY, []);
+export const getAuditLogs = (): any[] => {
+  return getStorageItem<any[]>(AUDIT_LOGS_KEY, []);
 };
 
 export const getUserFavorites = (userId: string): string[] => {
@@ -79,7 +77,7 @@ export const getNotifications = () => [];
 
 export const addAuditLog = (user: any, action: string, details: string): void => {
   const logs = getAuditLogs();
-  const newLog: AuditLog = {
+  const newLog: any = {
     id: 'log-' + Date.now(),
     userId: user?.id || 'unknown',
     userName: user?.name || user?.email || 'Sistema',
