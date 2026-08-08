@@ -9,6 +9,9 @@ const POLLS_KEY = 'uniccat_polls';
 const AUDIT_LOGS_KEY = 'uniccat_audit_logs';
 const FAVORITES_KEY = 'uniccat_user_favorites';
 const CALENDAR_KEY = 'uniccat_calendar_events';
+const CHAT_ROOMS_KEY = 'uniccat_chat_rooms';
+const CHAT_MSGS_KEY = 'uniccat_chat_messages';
+const USER_PRESENCE_KEY = 'uniccat_user_presence';
 
 // Inicializador genérico para garantir que o LocalStorage não quebre no build
 const getStorageItem = <T>(key: string, defaultValue: T): T => {
@@ -47,6 +50,28 @@ export const saveUserFavorites = (userId: string, favorites: string[]): void => 
   const allFavorites = getStorageItem<Record<string, string[]>>(FAVORITES_KEY, {});
   allFavorites[userId] = favorites;
   setStorageItem(FAVORITES_KEY, allFavorites);
+};
+
+// ==========================================
+// MÓDULO DE CHAT & PRESENÇA (STUBS ADICIONADOS)
+// ==========================================
+
+export const getChatRooms = (): any[] => getStorageItem<any[]>(CHAT_ROOMS_KEY, []);
+export const getChatMessages = (roomId: string): any[] => {
+  const allMsgs = getStorageItem<Record<string, any[]>>(CHAT_MSGS_KEY, {});
+  return allMsgs[roomId] || [];
+};
+
+export const sendChatMessage = (roomId: string, message: any): void => {
+  const allMsgs = getStorageItem<Record<string, any[]>>(CHAT_MSGS_KEY, {});
+  if (!allMsgs[roomId]) allMsgs[roomId] = [];
+  allMsgs[roomId].push(message);
+  setStorageItem(CHAT_MSGS_KEY, allMsgs);
+};
+
+export const getUserPresence = (): any[] => getStorageItem<any[]>(USER_PRESENCE_KEY, []);
+export const updateUserPresence = (userId: string, status: string): void => {
+  console.log(`Presença atualizada para o usuário ${userId}: ${status}`);
 };
 
 // ==========================================
@@ -98,7 +123,6 @@ export const saveCalendarEvent = (event: any): void => {
   setStorageItem(CALENDAR_KEY, [event, ...items]);
 };
 
-// Adicionado para satisfazer a View de Calendário Corporativo
 export const deleteCalendarEvent = (id: string): void => {
   const items = getCalendarEvents();
   setStorageItem(CALENDAR_KEY, items.filter(i => i.id !== id));
@@ -152,6 +176,7 @@ export const addAuditLog = (user: any, action: string, details: string): void =>
   };
   setStorageItem(AUDIT_LOGS_KEY, [newLog, ...logs]);
 };
+
 
 
 
