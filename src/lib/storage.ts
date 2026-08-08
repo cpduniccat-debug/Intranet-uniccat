@@ -53,7 +53,7 @@ export const saveUserFavorites = (userId: string, favorites: string[]): void => 
 };
 
 // ==========================================
-// MÓDULO DE CHAT & PRESENÇA (STUBS ADICIONADOS)
+// MÓDULO DE CHAT & PRESENÇA (CORRIGIDO)
 // ==========================================
 
 export const getChatRooms = (): any[] => getStorageItem<any[]>(CHAT_ROOMS_KEY, []);
@@ -69,9 +69,22 @@ export const sendChatMessage = (roomId: string, message: any): void => {
   setStorageItem(CHAT_MSGS_KEY, allMsgs);
 };
 
+// Alterado para plural para espelhar o import exato exigido pelo ChatView
+export const getUserPresences = (): any[] => getStorageItem<any[]>(USER_PRESENCE_KEY, []);
 export const getUserPresence = (): any[] => getStorageItem<any[]>(USER_PRESENCE_KEY, []);
+
 export const updateUserPresence = (userId: string, status: string): void => {
   console.log(`Presença atualizada para o usuário ${userId}: ${status}`);
+};
+
+// Adicionados: Stubs complementares mapeados do ChatView
+export const getOrCreateDirectRoom = (userAId: string, userBId: string): any => {
+  console.log(`Sala direta gerada entre ${userAId} e ${userBId}`);
+  return { id: 'room-direct', name: 'Conversa', type: 'DIRECT' };
+};
+
+export const markRoomMessagesAsRead = (roomId: string, userId: string): void => {
+  console.log(`Mensagens da sala ${roomId} marcadas como lidas por ${userId}`);
 };
 
 // ==========================================
@@ -176,6 +189,7 @@ export const addAuditLog = (user: any, action: string, details: string): void =>
   };
   setStorageItem(AUDIT_LOGS_KEY, [newLog, ...logs]);
 };
+
 
 
 
