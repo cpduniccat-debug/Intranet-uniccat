@@ -66,101 +66,100 @@ const setStorageItem = <T>(key: string, value: T): void => {
 // EXPORTS REQUERIDOS PELAS VIEWS INTERNAS
 // ==========================================
 
-const DEFAULT_USERS = [
-  {
-    id: 'u-teste-admin',
-    name: 'Usuário Teste (Admin)',
-    email: 'teste@uniccat.com.br',
-    password: 'uni@123',
-    role: 'Administrador',
-    department: 'Tecnologia da Informação',
-    extension: '100',
-    phone: '(11) 3300-1000',
-    mobile: '(11) 99999-9999',
-    photoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-    active: true,
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'u-ana',
-    name: 'Ana Paula Souza',
-    email: 'ana.souza@uniccat.com.br',
-    password: 'uni@123',
-    role: 'Funcionário',
-    department: 'Medicina Ocupacional',
-    extension: '101',
-    phone: '(11) 3300-1001',
-    mobile: '(11) 99111-2233',
-    photoUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
-    active: true,
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'u-carlos',
-    name: 'Carlos Eduardo Mendes',
-    email: 'carlos.mendes@uniccat.com.br',
-    password: 'uni@123',
-    role: 'Administrador',
-    department: 'Tecnologia da Informação',
-    extension: '102',
-    phone: '(11) 3300-1002',
-    mobile: '(11) 99222-3344',
-    photoUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-    active: true,
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'u-mariana',
-    name: 'Mariana Lima Santos',
-    email: 'mariana.lima@uniccat.com.br',
-    password: 'uni@123',
-    role: 'RH',
-    department: 'Recursos Humanos',
-    extension: '103',
-    phone: '(11) 3300-1003',
-    mobile: '(11) 99333-4455',
-    photoUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150',
-    active: true,
-    createdAt: new Date().toISOString()
-  }
+import { supabase, isSupabaseConfigured, toValidUuid } from './supabaseClient';
+
+const FAKE_USER_IDS = ['u-teste-admin', 'u-ana', 'u-carlos', 'u-mariana'];
+const FAKE_USER_EMAILS = [
+  'teste@uniccat.com.br',
+  'ana.souza@uniccat.com.br',
+  'carlos.mendes@uniccat.com.br',
+  'mariana.lima@uniccat.com.br'
 ];
 
 export const getUsers = (): any[] => {
-  const users = getStorageItem<any[]>(USERS_KEY, []);
-  if (users.length === 0) {
-    setStorageItem(USERS_KEY, DEFAULT_USERS);
-    return DEFAULT_USERS;
+  const rawUsers = getStorageItem<any[]>(USERS_KEY, []);
+  // Filtrar usuários fictícios de testes anteriores
+  const cleanUsers = rawUsers.filter(u => 
+    !FAKE_USER_IDS.includes(u.id) && !FAKE_USER_EMAILS.includes(u.email?.toLowerCase())
+  );
+  if (cleanUsers.length !== rawUsers.length) {
+    setStorageItem(USERS_KEY, cleanUsers);
   }
-  const testeIdx = users.findIndex(u => u.email === 'teste@uniccat.com.br');
-  if (testeIdx >= 0) {
-    if (users[testeIdx].role !== 'Administrador' || !users[testeIdx].active) {
-      users[testeIdx].role = 'Administrador';
-      users[testeIdx].active = true;
-      setStorageItem(USERS_KEY, users);
-    }
-  } else {
-    users.push({
-      id: 'u-teste-admin',
-      name: 'Usuário Teste (Admin)',
-      email: 'teste@uniccat.com.br',
-      password: 'uni@123',
-      role: 'Administrador',
-      department: 'Tecnologia da Informação',
-      extension: '100',
-      phone: '(11) 3300-1000',
-      mobile: '(11) 99999-9999',
-      photoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-      active: true,
-      createdAt: new Date().toISOString()
-    });
-    setStorageItem(USERS_KEY, users);
-  }
-  return users;
+  return cleanUsers;
 };
+
 export const getLastSupabaseError = () => null;
 
 export const syncAllLocalDataToSupabase = async () => {
-  return { success: true, message: 'Dados sincronizados com sucesso.', count: 0 };
+  if (!isSupabaseConfigured()) {
+    return { success: true, message: 'Supabase não está configurado. Operando via armazenamento local.', count: 0 };
+  }
+
+  let totalCount = 0;
+  try {
+    // Sincronizar Usuários / Profiles
+    const users = getUsers();
+    if (users.length > 0) {
+      const profileRows = users.map(u => ({
+        id: toValidUuid(u.id),
+        name: u.name,
+        email: u.email,
+        role: u.role || 'Funcionário',
+        department: u.department || 'Recursos Humanos',
+        extension: u.extension || u.ramal || null,
+        phone: u.phone || null,
+        mobile: u.mobile || null,
+        photo_url: u.photoUrl || null,
+        active: u.active ?? true,
+        location: u.location || 'Unidade Matriz'
+      }));
+      const { error } = await supabase.from('profiles').upsert(profileRows, { onConflict: 'email' });
+      if (!error) totalCount += users.length;
+    }
+
+    // Sincronizar Links Rápidos
+    const links = getQuickLinks();
+    if (links.length > 0) {
+      const linkRows = links.map(l => ({
+        title: l.title,
+        description: l.description || '',
+        url: l.url,
+        icon_name: l.iconName || 'Globe',
+        category: l.category || 'Portais',
+        is_official: l.isOfficial ?? true
+      }));
+      await supabase.from('quick_links').upsert(linkRows, { onConflict: 'url' });
+      totalCount += links.length;
+    }
+
+    // Sincronizar Comunicados
+    const announcements = getAnnouncements();
+    if (announcements.length > 0) {
+      const annRows = announcements.map(a => ({
+        title: a.title,
+        summary: a.summary || a.content?.substring(0, 100) || '',
+        content: a.content || '',
+        category: a.category || 'Geral',
+        priority: a.priority || 'Normal',
+        author_name: a.authorName || 'RH',
+        pinned: a.pinned ?? false
+      }));
+      await supabase.from('announcements').insert(annRows);
+      totalCount += announcements.length;
+    }
+
+    return { 
+      success: true, 
+      message: `Sincronização concluída com sucesso! ${totalCount} registros processados no Supabase PostgreSQL.`, 
+      count: totalCount 
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      message: `Falha na sincronização com Supabase: ${err?.message || 'Erro desconhecido'}`,
+      count: 0
+    };
+  }
 };
 
 export const saveUser = (user: any): void => {
@@ -169,6 +168,25 @@ export const saveUser = (user: any): void => {
   if (idx >= 0) users[idx] = user;
   else users.push(user);
   setStorageItem(USERS_KEY, users);
+
+  // Sync to Supabase in background
+  if (isSupabaseConfigured()) {
+    Promise.resolve(
+      supabase.from('profiles').upsert({
+        id: toValidUuid(user.id),
+        name: user.name,
+        email: user.email,
+        role: user.role || 'Funcionário',
+        department: user.department || 'Recursos Humanos',
+        extension: user.extension || user.ramal || null,
+        phone: user.phone || null,
+        mobile: user.mobile || null,
+        photo_url: user.photoUrl || null,
+        active: user.active ?? true,
+        location: user.location || 'Unidade Matriz'
+      }, { onConflict: 'email' })
+    ).catch(console.error);
+  }
 };
 
 export const saveUsersBatch = (usersBatch: any[]): void => {
@@ -179,6 +197,25 @@ export const saveUsersBatch = (usersBatch: any[]): void => {
     else users.push(u);
   });
   setStorageItem(USERS_KEY, users);
+
+  if (isSupabaseConfigured() && usersBatch.length > 0) {
+    const profileRows = usersBatch.map(u => ({
+      id: toValidUuid(u.id),
+      name: u.name,
+      email: u.email,
+      role: u.role || 'Funcionário',
+      department: u.department || 'Recursos Humanos',
+      extension: u.extension || u.ramal || null,
+      phone: u.phone || null,
+      mobile: u.mobile || null,
+      photo_url: u.photoUrl || null,
+      active: u.active ?? true,
+      location: u.location || 'Unidade Matriz'
+    }));
+    Promise.resolve(
+      supabase.from('profiles').upsert(profileRows, { onConflict: 'email' })
+    ).catch(console.error);
+  }
 };
 
 export const deleteUser = (userId: string): void => {

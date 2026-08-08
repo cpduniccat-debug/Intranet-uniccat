@@ -21,7 +21,8 @@ import { GlobalSearchModal } from './components/modals/GlobalSearchModal';
 import { SqlSchemaModal } from './components/modals/SqlSchemaModal';
 import { NotificationSettingsModal } from './components/modals/NotificationSettingsModal';
 import { CalendarCheck, HelpCircle } from 'lucide-react';
-import { supabase } from './lib/supabaseClient';
+import { supabase, toValidUuid } from './lib/supabaseClient';
+import { saveUser } from './lib/storage';
 
 export default function App() {
   const [currentUser, setUser] = useState<any | null>(null);
@@ -43,16 +44,26 @@ export default function App() {
 
   const fetchUserProfile = async (supabaseUser: any) => {
     if (!supabaseUser) return;
-    const isTestAdmin = supabaseUser.email?.toLowerCase() === 'teste@uniccat.com.br';
     
-    // Default safe user object
+    const userEmail = (supabaseUser.email || 'usuario@uniccat.com.br').toLowerCase();
+    const defaultName = supabaseUser.name || supabaseUser.user_metadata?.name || userEmail.split('@')[0].replace('.', ' ').toUpperCase();
+    
+    const validRoles = ['Administrador', 'RH', 'Financeiro', 'Comercial', 'Recepção', 'Médico', 'Coordenador', 'Gestor', 'Funcionário'];
+    let defaultRole = 'Administrador';
+    
+    if (validRoles.includes(supabaseUser.user_metadata?.role)) {
+      defaultRole = supabaseUser.user_metadata.role;
+    } else if (validRoles.includes(supabaseUser.role) && supabaseUser.role !== 'authenticated' && supabaseUser.role !== 'USER') {
+      defaultRole = supabaseUser.role;
+    }
+    
     const baseUser = {
-      id: supabaseUser.id || (isTestAdmin ? 'u-teste-admin' : 'u-' + Date.now()),
-      email: supabaseUser.email || 'usuario@uniccat.com.br',
-      name: supabaseUser.user_metadata?.name || (isTestAdmin ? 'Usuário Teste (Admin)' : (supabaseUser.email?.split('@')[0] || 'Usuário')),
-      role: isTestAdmin ? 'Administrador' : (supabaseUser.role || 'USER'),
-      department: isTestAdmin ? 'Tecnologia da Informação' : (supabaseUser.department || 'Geral'),
-      ramal: supabaseUser.ramal || '100',
+      id: supabaseUser.id || ('u-' + Date.now()),
+      email: userEmail,
+      name: defaultName,
+      role: defaultRole,
+      department: supabaseUser.department || 'Tecnologia da Informação',
+      ramal: supabaseUser.ramal || supabaseUser.extension || '100',
       active: true,
       photoUrl: supabaseUser.photoUrl || supabaseUser.user_metadata?.avatar_url || null
     };
@@ -60,28 +71,50 @@ export default function App() {
     setUser(baseUser);
 
     try {
-      if (!isTestAdmin) {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', supabaseUser.id)
-          .single();
+      if (supabaseUser.id || userEmail) {
+        let query = supabase.from('profiles').select('*');
+        if (supabaseUser.id && supabaseUser.id.length > 20) {
+          query = query.or(`id.eq.${supabaseUser.id},email.eq.${userEmail}`);
+        } else {
+          query = query.eq('email', userEmail);
+        }
+
+        const { data, error } = await query.maybeSingle();
 
         if (data && !error) {
-          setUser({
-            id: supabaseUser.id,
-            email: supabaseUser.email,
+          const finalRole = validRoles.includes(data.role) ? data.role : defaultRole;
+          const activeUser = {
+            id: supabaseUser.id || data.id,
+            email: userEmail,
             name: data.name || baseUser.name,
-            role: data.role || baseUser.role,
+            role: finalRole,
             department: data.department || baseUser.department,
-            ramal: data.ramal || baseUser.ramal,
-            photoUrl: data.avatar_url || baseUser.photoUrl,
-            active: true
-          });
+            ramal: data.extension || data.ramal || baseUser.ramal,
+            photoUrl: data.photo_url || baseUser.photoUrl,
+            active: data.active ?? true
+          };
+          setUser(activeUser);
+          saveUser(activeUser);
+        } else {
+          // Record profile in Supabase table
+          const profileRow = {
+            id: toValidUuid(supabaseUser.id),
+            name: baseUser.name,
+            email: userEmail,
+            role: baseUser.role,
+            department: baseUser.department,
+            extension: baseUser.ramal,
+            active: true,
+            location: 'Sede Principal - SP'
+          };
+          Promise.resolve(
+            supabase.from('profiles').upsert(profileRow, { onConflict: 'email' })
+          ).catch(console.error);
+          saveUser(baseUser);
         }
       }
     } catch (err) {
-      console.error(err);
+      console.error('Erro ao verificar perfil no Supabase:', err);
     }
   };
 

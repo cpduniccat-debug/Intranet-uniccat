@@ -1,16 +1,15 @@
 import React, { useState } from 'react';
 import { Lock, Mail, Eye, EyeOff, ArrowRight, X } from 'lucide-react';
-import { supabase, supabaseUrl, supabaseAnonKey, isSupabaseConfigured } from '../../lib/supabaseClient';
+import { supabase, supabaseUrl, supabaseAnonKey } from '../../lib/supabaseClient';
+import { getUsers, saveUser } from '../../lib/storage';
 
 interface LoginViewProps {
-  // Alterado para aceitar qualquer estrutura temporariamente e destravar o build
   onLoginSuccess: (user: any) => void; 
 }
 
 export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
@@ -26,51 +25,77 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
 
     setLoading(true);
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password: password,
-    });
+    const emailTrim = email.trim().toLowerCase();
+
+    // 1. Tenta autenticar via Supabase Auth se configurado
+    if (supabaseUrl && supabaseAnonKey !== 'placeholder-key') {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: emailTrim,
+        password: password,
+      });
+
+      if (!error && data?.user) {
+        setLoading(false);
+        const u = data.user as any;
+        const validRoles = ['Administrador', 'RH', 'Financeiro', 'Comercial', 'Recepção', 'Médico', 'Coordenador', 'Gestor', 'Funcionário'];
+        
+        let appRole = 'Administrador';
+        if (validRoles.includes(u.user_metadata?.role)) {
+          appRole = u.user_metadata.role;
+        } else if (validRoles.includes(u.role) && u.role !== 'authenticated' && u.role !== 'USER') {
+          appRole = u.role;
+        }
+
+        const loggedUser = {
+          ...u,
+          id: u.id,
+          email: u.email,
+          name: u.user_metadata?.name || u.email?.split('@')[0].replace('.', ' ').toUpperCase(),
+          role: appRole,
+          department: u.user_metadata?.department || 'Tecnologia da Informação',
+          ramal: u.user_metadata?.ramal || '100',
+          active: true
+        };
+
+        saveUser(loggedUser);
+        onLoginSuccess(loggedUser);
+        return;
+      }
+    }
+
+    // 2. Fallback de verificação contra usuários cadastrados no sistema
+    const registeredUsers = getUsers();
+    const matchedUser = registeredUsers.find(
+      u => u.email?.toLowerCase() === emailTrim && (u.password === password || !u.password)
+    );
 
     setLoading(false);
 
-    if (error || !supabaseUrl || supabaseAnonKey === 'placeholder-key') {
-      const emailTrim = email.trim().toLowerCase();
-      const isTestAdmin = emailTrim === 'teste@uniccat.com.br';
-      if (isTestAdmin || password.length > 0) {
-        onLoginSuccess({
-          id: isTestAdmin ? 'u-teste-admin' : ('u-' + Date.now()),
-          email: emailTrim,
-          name: isTestAdmin ? 'Usuário Teste (Admin)' : (emailTrim.split('@')[0]),
-          role: isTestAdmin ? 'Administrador' : 'USER',
-          department: isTestAdmin ? 'Tecnologia da Informação' : 'Geral',
-          ramal: '100',
-          active: true,
-          user_metadata: { name: isTestAdmin ? 'Usuário Teste (Admin)' : emailTrim.split('@')[0] }
-        });
+    if (matchedUser) {
+      if (!matchedUser.active) {
+        setErrorMsg('Usuário inativo. Entre em contato com o Administrador.');
         return;
       }
-      if (error?.message === 'Invalid login credentials') {
-        setErrorMsg('E-mail ou senha incorretos.');
-      } else {
-        setErrorMsg(error?.message || 'Erro ao realizar login.');
-      }
+      onLoginSuccess(matchedUser);
       return;
     }
 
-    if (data?.user) {
-      const u = data.user as any;
-      const isTestAdmin = u.email?.toLowerCase() === 'teste@uniccat.com.br';
-      onLoginSuccess({
-        id: u.id,
-        email: u.email,
-        name: u.user_metadata?.name || (isTestAdmin ? 'Usuário Teste (Admin)' : u.email?.split('@')[0]),
-        role: isTestAdmin ? 'Administrador' : (u.role || 'USER'),
-        department: isTestAdmin ? 'Tecnologia da Informação' : (u.department || 'Geral'),
-        ramal: u.ramal || '100',
-        active: true,
-        ...u
-      });
+    // 3. Se for o primeiro acesso de uma conta corporativa válida
+    if (emailTrim.endsWith('@uniccat.com.br') && password.length >= 4) {
+      const newUser = {
+        id: 'u-' + Date.now(),
+        email: emailTrim,
+        name: emailTrim.split('@')[0].replace('.', ' ').toUpperCase(),
+        role: registeredUsers.length === 0 ? 'Administrador' : 'Funcionário',
+        department: 'Tecnologia da Informação',
+        ramal: '100',
+        active: true
+      };
+      onLoginSuccess(newUser);
+      return;
     }
+
+    setErrorMsg('E-mail ou senha incorretos.');
   };
 
   return (
@@ -78,7 +103,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
       <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl p-8 relative z-10">
         
         <div className="text-center space-y-2 mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-blue-700 text-white font-bold text-2xl mb-2">U</div>
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-blue-700 text-white font-bold text-2xl mb-2 shadow-md">U</div>
           <h1 className="text-2xl font-bold text-blue-900 dark:text-white">UNICCAT INTRANET</h1>
           <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold uppercase tracking-wider">Medicina e Segurança do Trabalho</p>
         </div>
@@ -127,21 +152,10 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-lg text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full py-3 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-lg text-sm flex items-center justify-center gap-2 disabled:opacity-50 shadow-sm transition"
           >
             <span>{loading ? 'Autenticando...' : 'Entrar na Intranet'}</span>
             {!loading && <ArrowRight className="w-4 h-4" />}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setEmail('teste@uniccat.com.br');
-              setPassword('uni@123');
-            }}
-            className="w-full py-2 px-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold border border-slate-200 dark:border-slate-700 transition-colors flex items-center justify-center gap-1.5"
-          >
-            <span>Preencher Acesso Admin (teste@uniccat.com.br)</span>
           </button>
         </form>
 
