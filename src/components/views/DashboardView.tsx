@@ -90,8 +90,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     department: u.department,
     role: u.role,
     birthDate: u.birthDate || '1990-08-15',
-    day: u.birthDate ? parseInt(u.birthDate.split('-')[2]) : 15,
-    month: u.birthDate ? parseInt(u.birthDate.split('-')[1]) : 8
+    day: u.birthDate && u.birthDate.split('-').length >= 3 ? parseInt(u.birthDate.split('-')[2]) || 15 : 15,
+    month: u.birthDate && u.birthDate.split('-').length >= 2 ? parseInt(u.birthDate.split('-')[1]) || 8 : 8
   })).filter(b => b.month === 8).sort((a, b) => a.day - b.day);
 
   // Filtered Announcements
@@ -116,7 +116,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <span>Bem-vindo à Intranet UNICCAT</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-              Olá, {u.name.split(' ')[0]}! 👋
+              Olá, {(u.name || 'Visitante').split(' ')[0]}! 👋
             </h1>
             <p className="text-sm text-blue-100/90 leading-relaxed">
               Acompanhe os comunicados oficiais do RH, acesse seus sistemas médicos e de gestão, e fique por dentro da programação da semana.
@@ -421,10 +421,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <div className="flex items-center gap-3">
                     <div className="px-3 py-1.5 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg text-center shrink-0">
                       <span className="block text-[10px] uppercase text-blue-700 dark:text-blue-300 font-bold">
-                        {evt.startDate.split('-')[1]}
+                        {evt.startDate && evt.startDate.split('-').length >= 2 ? evt.startDate.split('-')[1] : '08'}
                       </span>
                       <span className="block text-sm font-extrabold text-blue-900 dark:text-white leading-none">
-                        {evt.startDate.split('-')[2]}
+                        {evt.startDate && evt.startDate.split('-').length >= 3 ? evt.startDate.split('-')[2] : '15'}
                       </span>
                     </div>
 

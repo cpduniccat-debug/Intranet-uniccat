@@ -42,13 +42,23 @@ export const getWiki = (): any[] => getStorageItem<any[]>(WIKI_KEY, []);
 // Inicializador genérico para garantir que o LocalStorage não quebre no build
 const getStorageItem = <T>(key: string, defaultValue: T): T => {
   if (typeof window === 'undefined') return defaultValue;
-  const item = localStorage.getItem(key);
-  return item ? JSON.parse(item) : defaultValue;
+  try {
+    const item = localStorage.getItem(key);
+    if (!item) return defaultValue;
+    return JSON.parse(item);
+  } catch (e) {
+    console.error(`Erro ao ler chave ${key} do localStorage:`, e);
+    return defaultValue;
+  }
 };
 
 const setStorageItem = <T>(key: string, value: T): void => {
   if (typeof window !== 'undefined') {
-    localStorage.setItem(key, JSON.stringify(value));
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (e) {
+      console.error(`Erro ao gravar chave ${key} no localStorage:`, e);
+    }
   }
 };
 

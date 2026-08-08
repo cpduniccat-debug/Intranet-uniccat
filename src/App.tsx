@@ -237,6 +237,8 @@ export default function App() {
         <AnnouncementDetailModal
           announcement={selectedAnnouncement}
           onClose={() => setSelectedAnnouncement(null)}
+          currentUser={currentUser}
+          onRefresh={() => {}}
         />
       )}
 
@@ -248,12 +250,13 @@ export default function App() {
 
       <SqlSchemaModal
         isOpen={sqlModalOpen}
-        onClose={() => sqlModalOpen(false)}
+        onClose={() => setSqlModalOpen(false)}
       />
 
       <NotificationSettingsModal
         isOpen={notifSettingsModalOpen}
         onClose={() => setNotifSettingsModalOpen(false)}
+        currentUser={currentUser}
       />
 
       {toast && (

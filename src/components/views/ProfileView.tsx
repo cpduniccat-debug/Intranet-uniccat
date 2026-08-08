@@ -43,14 +43,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ currentUser, onUpdateC
 
   // Edit Profile Info State
   const [profileData, setProfileData] = useState({
-    name: currentUser.name,
-    email: currentUser.email,
+    name: currentUser.name || '',
+    email: currentUser.email || '',
     extension: currentUser.extension || '',
     phone: currentUser.phone || '',
     mobile: currentUser.mobile || '',
     location: currentUser.location || 'Sede São Paulo - SP',
     bio: currentUser.bio || '',
-    photoUrl: currentUser.photoUrl
+    photoUrl: currentUser.photoUrl || ''
   });
 
   const [profileSuccess, setProfileSuccess] = useState('');
