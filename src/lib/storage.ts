@@ -9,6 +9,7 @@ const LINKS_KEY = 'uniccat_links';
 const DOCS_KEY = 'uniccat_docs';
 const POLLS_KEY = 'uniccat_polls';
 const AUDIT_LOGS_KEY = 'uniccat_audit_logs';
+const FAVORITES_KEY = 'uniccat_user_favorites';
 
 // Inicializador genérico para garantir que o LocalStorage não quebre no build
 const getStorageItem = <T>(key: string, defaultValue: T): T => {
@@ -61,6 +62,17 @@ export const getPolls = (): Poll[] => {
 
 export const getAuditLogs = (): AuditLog[] => {
   return getStorageItem<AuditLog[]>(AUDIT_LOGS_KEY, []);
+};
+
+export const getUserFavorites = (userId: string): string[] => {
+  const allFavorites = getStorageItem<Record<string, string[]>>(FAVORITES_KEY, {});
+  return allFavorites[userId] || [];
+};
+
+export const saveUserFavorites = (userId: string, favorites: string[]): void => {
+  const allFavorites = getStorageItem<Record<string, string[]>>(FAVORITES_KEY, {});
+  allFavorites[userId] = favorites;
+  setStorageItem(FAVORITES_KEY, allFavorites);
 };
 
 export const getNotifications = () => [];
