@@ -50,7 +50,7 @@ export const saveUserFavorites = (userId: string, favorites: string[]): void => 
 };
 
 // ==========================================
-// AÇÕES DE ESCRITA E EXCLUSÃO DO LEGADO (STUBS)
+// AÇÕES DE ESCRITA E EXCLUSÃO DO LEGADO
 // ==========================================
 
 export const saveAnnouncement = (announcement: any): void => {
@@ -99,7 +99,7 @@ export const saveCalendarEvent = (event: any): void => {
 };
 
 // ==========================================
-// INTERAÇÕES REQUERIDAS PELO DASHBOARD
+// INTERAÇÕES REQUERIDAS PELAS VIEWS DE CONTEÚDO
 // ==========================================
 
 export const toggleUserFavorite = (userId: string, itemId: string): string[] => {
@@ -110,12 +110,26 @@ export const toggleUserFavorite = (userId: string, itemId: string): string[] => 
   return updated;
 };
 
+// Adicionado para satisfazer a Central de Documentos
+export const confirmDocumentRead = (documentId: string, userId: string): void => {
+  console.log(`Documento lido: ${documentId} por ${userId}`);
+};
+
 export const confirmAnnouncementRead = (announcementId: string, userId: string): void => {
   console.log(`Leitura confirmada: ${announcementId} por ${userId}`);
 };
 
 export const votePoll = (pollId: string, optionId: string, userId: string): void => {
   console.log(`Voto registrado na enquete ${pollId}, opção ${optionId} por ${userId}`);
+};
+
+// Outros stubs preventivos de ações secundárias
+export const addTicketMessage = (ticketId: string, message: any): void => {
+  console.log(`Mensagem no chamado ${ticketId}`, message);
+};
+
+export const updateTicketStatus = (ticketId: string, status: string): void => {
+  console.log(`Status do chamado ${ticketId} alterado para ${status}`);
 };
 
 export const getNotifications = () => [];
