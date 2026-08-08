@@ -36,8 +36,6 @@ export const getTickets = (): any[] => getStorageItem<any[]>(TICKETS_KEY, []);
 export const getDocuments = (): any[] => getStorageItem<any[]>(DOCS_KEY, []);
 export const getPolls = (): any[] => getStorageItem<any[]>(POLLS_KEY, []);
 export const getAuditLogs = (): any[] => getStorageItem<any[]>(AUDIT_LOGS_KEY, []);
-
-// Adicionado: Stub essencial para o Dashboard e Calendário
 export const getCalendarEvents = (): any[] => getStorageItem<any[]>(CALENDAR_KEY, []);
 
 export const getUserFavorites = (userId: string): string[] => {
@@ -49,6 +47,26 @@ export const saveUserFavorites = (userId: string, favorites: string[]): void => 
   const allFavorites = getStorageItem<Record<string, string[]>>(FAVORITES_KEY, {});
   allFavorites[userId] = favorites;
   setStorageItem(FAVORITES_KEY, allFavorites);
+};
+
+// ==========================================
+// INTERAÇÕES REQUERIDAS PELO DASHBOARD
+// ==========================================
+
+export const toggleUserFavorite = (userId: string, itemId: string): string[] => {
+  const favorites = getUserFavorites(userId);
+  const exists = favorites.includes(itemId);
+  const updated = exists ? favorites.filter(id => id !== itemId) : [...favorites, itemId];
+  saveUserFavorites(userId, updated);
+  return updated;
+};
+
+export const confirmAnnouncementRead = (announcementId: string, userId: string): void => {
+  console.log(`Leitura confirmada: ${announcementId} por ${userId}`);
+};
+
+export const votePoll = (pollId: string, optionId: string, userId: string): void => {
+  console.log(`Voto registrado na enquete ${pollId}, opção ${optionId} por ${userId}`);
 };
 
 export const getNotifications = () => [];
