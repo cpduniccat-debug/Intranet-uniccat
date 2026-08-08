@@ -44,7 +44,7 @@ export const AnnouncementsView: React.FC<AnnouncementsViewProps> = ({
   const [uploadedImages, setUploadedImages] = useState<{ name: string; url: string }[]>([]);
   const [attachmentName, setAttachmentName] = useState('');
 
-  const canManage = currentUser.role === 'Administrador' || currentUser.role === 'RH';
+  const canManage = currentUser.role === 'Administrador' || currentUser.role === 'RH' || currentUser.department === 'Recursos Humanos';
 
   const handleImageFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -96,6 +96,10 @@ export const AnnouncementsView: React.FC<AnnouncementsViewProps> = ({
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canManage) {
+      alert('Apenas usuários do RH e Administradores podem criar comunicados no sistema.');
+      return;
+    }
     if (!title || !content) return;
 
     // Build attachments array from uploaded images and PDF name if provided

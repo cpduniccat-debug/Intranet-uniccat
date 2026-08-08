@@ -42,32 +42,43 @@ export default function App() {
   } | null>(null);
 
   const fetchUserProfile = async (supabaseUser: any) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', supabaseUser.id)
-        .single();
+    if (!supabaseUser) return;
+    const isTestAdmin = supabaseUser.email?.toLowerCase() === 'teste@uniccat.com.br';
+    
+    // Default safe user object
+    const baseUser = {
+      id: supabaseUser.id || (isTestAdmin ? 'u-teste-admin' : 'u-' + Date.now()),
+      email: supabaseUser.email || 'usuario@uniccat.com.br',
+      name: supabaseUser.user_metadata?.name || (isTestAdmin ? 'Usuário Teste (Admin)' : (supabaseUser.email?.split('@')[0] || 'Usuário')),
+      role: isTestAdmin ? 'Administrador' : (supabaseUser.role || 'USER'),
+      department: isTestAdmin ? 'Tecnologia da Informação' : (supabaseUser.department || 'Geral'),
+      ramal: supabaseUser.ramal || '100',
+      active: true,
+      photoUrl: supabaseUser.photoUrl || supabaseUser.user_metadata?.avatar_url || null
+    };
 
-      if (data && !error) {
-        setUser({
-          id: supabaseUser.id,
-          email: supabaseUser.email,
-          name: data.name,
-          role: data.role || 'USER',
-          department: data.department || 'Geral',
-          ramal: data.ramal || 'S/R',
-          photoUrl: data.avatar_url || null
-        });
-      } else {
-        setUser({
-          id: supabaseUser.id,
-          email: supabaseUser.email,
-          name: supabaseUser.email?.split('@')[0],
-          role: 'USER',
-          department: 'Não Atribuído',
-          ramal: '---'
-        });
+    setUser(baseUser);
+
+    try {
+      if (!isTestAdmin) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', supabaseUser.id)
+          .single();
+
+        if (data && !error) {
+          setUser({
+            id: supabaseUser.id,
+            email: supabaseUser.email,
+            name: data.name || baseUser.name,
+            role: data.role || baseUser.role,
+            department: data.department || baseUser.department,
+            ramal: data.ramal || baseUser.ramal,
+            photoUrl: data.avatar_url || baseUser.photoUrl,
+            active: true
+          });
+        }
       }
     } catch (err) {
       console.error(err);

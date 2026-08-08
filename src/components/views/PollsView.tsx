@@ -77,6 +77,11 @@ export const PollsView: React.FC<PollsViewProps> = ({ currentUser }) => {
 
   const handleCreatePoll = (e: React.FormEvent) => {
     e.preventDefault();
+    const canManage = currentUser.role === 'Administrador' || currentUser.role === 'RH' || currentUser.department === 'Recursos Humanos';
+    if (!canManage) {
+      alert('Apenas usuários do RH e Administradores podem criar enquetes e pesquisas no sistema.');
+      return;
+    }
     if (!formQuestion.trim()) return;
 
     let newPoll: Poll;

@@ -44,27 +44,28 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onSelectAnnouncement,
   onNavigate
 }) => {
+  const u = currentUser || { id: 'guest', name: 'Visitante', role: 'USER' };
   const [announcements, setAnnouncements] = useState<Announcement[]>(getAnnouncements());
   const [quickLinks] = useState<QuickLink[]>(getQuickLinks());
   const [users] = useState<UserProfile[]>(getUsers());
   const [events] = useState(getCalendarEvents());
   const [polls, setPolls] = useState<Poll[]>(getPolls());
-  const [favorites, setFavorites] = useState<string[]>(getUserFavorites(currentUser.id));
+  const [favorites, setFavorites] = useState<string[]>(getUserFavorites(u.id));
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
 
   const handleToggleFavorite = (linkId: string) => {
-    toggleUserFavorite(currentUser.id, linkId);
-    setFavorites(getUserFavorites(currentUser.id));
+    toggleUserFavorite(u.id, linkId);
+    setFavorites(getUserFavorites(u.id));
   };
 
   const handleReadConfirm = (e: React.MouseEvent, announcementId: string) => {
     e.stopPropagation();
-    confirmAnnouncementRead(announcementId, currentUser.id);
+    confirmAnnouncementRead(announcementId, u.id);
     setAnnouncements(getAnnouncements());
   };
 
   const handleVote = (pollId: string, optionId: string) => {
-    votePoll(pollId, optionId, currentUser.id);
+    votePoll(pollId, optionId, u.id);
     setPolls(getPolls());
   };
 
@@ -115,7 +116,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <span>Bem-vindo à Intranet UNICCAT</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-              Olá, {currentUser.name.split(' ')[0]}! 👋
+              Olá, {u.name.split(' ')[0]}! 👋
             </h1>
             <p className="text-sm text-blue-100/90 leading-relaxed">
               Acompanhe os comunicados oficiais do RH, acesse seus sistemas médicos e de gestão, e fique por dentro da programação da semana.
@@ -180,7 +181,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* Announcements Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredAnnouncements.slice(0, 6).map(a => {
-            const isRead = a.readBy?.includes(currentUser.id);
+            const isRead = a.readBy?.includes(currentUser?.id || '');
 
             return (
               <div
@@ -463,7 +464,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               {activePoll.options && activePoll.options.length > 0 ? (
                 <div className="space-y-2">
                   {activePoll.options.map(opt => {
-                    const hasVoted = activePoll.votedUserIds.includes(currentUser.id);
+                    const hasVoted = activePoll.votedUserIds.includes(currentUser?.id || '');
                     const totalVotes = activePoll.options.reduce((sum, o) => sum + o.votes, 0);
                     const percentage = totalVotes > 0 ? Math.round((opt.votes / totalVotes) * 100) : 0;
 
@@ -509,7 +510,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </div>
               )}
 
-              {activePoll.votedUserIds.includes(currentUser.id) && (
+              {activePoll.votedUserIds.includes(u.id) && (
                 <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold text-center">
                   ✓ Seu voto foi computado com sucesso!
                 </p>

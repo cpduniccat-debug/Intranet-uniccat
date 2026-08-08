@@ -317,7 +317,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ currentUser, onOpenSqlModa
         birthDate: '1992-06-15',
         hireDate: new Date().toISOString().split('T')[0],
         bio: 'Colaborador importado automaticamente via lote de cadastro.',
-        active: true
+        active: true,
+        createdAt: new Date().toISOString()
       };
     });
   };

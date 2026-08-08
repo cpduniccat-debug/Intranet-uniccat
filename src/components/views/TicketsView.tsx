@@ -266,8 +266,11 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ currentUser }) => {
     if (updated) setSelectedTicket(updated);
   };
 
+  const canViewAllTickets = currentUser.role === 'Administrador' || currentUser.department === 'Tecnologia da Informação' || currentUser.role === 'RH' || currentUser.department === 'Recursos Humanos';
+
   // Filter logic
   const filteredTickets = tickets.filter(t => {
+    if (!canViewAllTickets && t.requesterId !== currentUser.id) return false;
     if (viewTab === 'my' && t.requesterId !== currentUser.id) return false;
     if (selectedStatus !== 'all' && t.status !== selectedStatus) return false;
     if (selectedDepartment !== 'all' && t.requesterDepartment !== selectedDepartment) return false;
