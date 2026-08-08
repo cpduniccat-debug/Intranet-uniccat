@@ -254,8 +254,35 @@ CREATE TABLE IF NOT EXISTS public.vacation_notices (
 );
 
 
+-- 16. TRIGGER AUTOMÁTICO DE PERFIL AO CRIAR USUÁRIO NO AUTH DO SUPABASE
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger AS $$
+BEGIN
+  INSERT INTO public.profiles (id, name, email, role, department, extension, active)
+  VALUES (
+    new.id,
+    COALESCE(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
+    new.email,
+    'Administrador'::public.user_role,
+    'Tecnologia da Informação'::public.department_type,
+    '100',
+    true
+  )
+  ON CONFLICT (email) DO UPDATE SET
+    id = EXCLUDED.id,
+    role = 'Administrador'::public.user_role;
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+
 -- ==============================================================================
--- 15. SEGURANÇA & POLÍTICAS RLS (ROW LEVEL SECURITY)
+-- 17. SEGURANÇA & POLÍTICAS RLS (ROW LEVEL SECURITY)
 -- ==============================================================================
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;

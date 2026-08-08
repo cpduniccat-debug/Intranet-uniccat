@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Lock, Mail, Eye, EyeOff, ArrowRight, X } from 'lucide-react';
-import { supabase, supabaseUrl, supabaseAnonKey } from '../../lib/supabaseClient';
+import { supabase, supabaseUrl, supabaseAnonKey, isSupabaseConfigured } from '../../lib/supabaseClient';
 import { getUsers, saveUser } from '../../lib/storage';
 
 interface LoginViewProps {
@@ -28,38 +28,55 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     const emailTrim = email.trim().toLowerCase();
 
     // 1. Tenta autenticar via Supabase Auth se configurado
-    if (supabaseUrl && supabaseAnonKey !== 'placeholder-key') {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: emailTrim,
-        password: password,
-      });
+    if (isSupabaseConfigured() && supabaseUrl && supabaseAnonKey !== 'placeholder-key') {
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: emailTrim,
+          password: password,
+        });
 
-      if (!error && data?.user) {
-        setLoading(false);
-        const u = data.user as any;
-        const validRoles = ['Administrador', 'RH', 'Financeiro', 'Comercial', 'Recepção', 'Médico', 'Coordenador', 'Gestor', 'Funcionário'];
-        
-        let appRole = 'Administrador';
-        if (validRoles.includes(u.user_metadata?.role)) {
-          appRole = u.user_metadata.role;
-        } else if (validRoles.includes(u.role) && u.role !== 'authenticated' && u.role !== 'USER') {
-          appRole = u.role;
+        if (error) {
+          setLoading(false);
+          const errStr = error.message.toLowerCase();
+          if (errStr.includes('email not confirmed')) {
+            setErrorMsg('E-mail não confirmado no Supabase. No painel do Supabase -> Authentication -> Users, confirme o e-mail do usuário ou desative "Confirm email" nas configurações do Auth.');
+          } else if (errStr.includes('invalid login credentials') || errStr.includes('invalid credentials')) {
+            setErrorMsg('E-mail ou senha incorretos no Supabase. Verifique se a conta foi criada no painel Supabase (Authentication -> Users) com esta mesma senha.');
+          } else {
+            setErrorMsg(`Erro de autenticação no Supabase: ${error.message}`);
+          }
+          return;
         }
 
-        const loggedUser = {
-          ...u,
-          id: u.id,
-          email: u.email,
-          name: u.user_metadata?.name || u.email?.split('@')[0].replace('.', ' ').toUpperCase(),
-          role: appRole,
-          department: u.user_metadata?.department || 'Tecnologia da Informação',
-          ramal: u.user_metadata?.ramal || '100',
-          active: true
-        };
+        if (data?.user) {
+          setLoading(false);
+          const u = data.user as any;
+          const validRoles = ['Administrador', 'RH', 'Financeiro', 'Comercial', 'Recepção', 'Médico', 'Coordenador', 'Gestor', 'Funcionário'];
+          
+          let appRole = 'Administrador';
+          if (validRoles.includes(u.user_metadata?.role)) {
+            appRole = u.user_metadata.role;
+          } else if (validRoles.includes(u.role) && u.role !== 'authenticated' && u.role !== 'USER') {
+            appRole = u.role;
+          }
 
-        saveUser(loggedUser);
-        onLoginSuccess(loggedUser);
-        return;
+          const loggedUser = {
+            ...u,
+            id: u.id,
+            email: u.email,
+            name: u.user_metadata?.name || u.email?.split('@')[0].replace('.', ' ').toUpperCase(),
+            role: appRole,
+            department: u.user_metadata?.department || 'Tecnologia da Informação',
+            ramal: u.user_metadata?.ramal || '100',
+            active: true
+          };
+
+          saveUser(loggedUser);
+          onLoginSuccess(loggedUser);
+          return;
+        }
+      } catch (err: any) {
+        console.error('Erro na chamada Supabase Auth:', err);
       }
     }
 
