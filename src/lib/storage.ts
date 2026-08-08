@@ -8,6 +8,7 @@ const DOCS_KEY = 'uniccat_docs';
 const POLLS_KEY = 'uniccat_polls';
 const AUDIT_LOGS_KEY = 'uniccat_audit_logs';
 const FAVORITES_KEY = 'uniccat_user_favorites';
+const CALENDAR_KEY = 'uniccat_calendar_events';
 
 // Inicializador genérico para garantir que o LocalStorage não quebre no build
 const getStorageItem = <T>(key: string, defaultValue: T): T => {
@@ -23,44 +24,21 @@ const setStorageItem = <T>(key: string, value: T): void => {
 };
 
 // ==========================================
-// EXPORTS REQUERIDOS PELAS VIEWS INTERNAS (GENÉRICOS)
+// EXPORTS REQUERIDOS PELAS VIEWS INTERNAS
 // ==========================================
 
-export const getUsers = (): any[] => {
-  return getStorageItem<any[]>(USERS_KEY, []);
-};
+export const getUsers = (): any[] => getStorageItem<any[]>(USERS_KEY, []);
+export const getCurrentUser = (): any | null => getStorageItem<any | null>(CURRENT_USER_KEY, null);
+export const setCurrentUser = (user: any | null): void => setStorageItem(CURRENT_USER_KEY, user);
+export const getQuickLinks = (): any[] => getStorageItem<any[]>(LINKS_KEY, []);
+export const getAnnouncements = (): any[] => getStorageItem<any[]>(ANNOUNCEMENTS_KEY, []);
+export const getTickets = (): any[] => getStorageItem<any[]>(TICKETS_KEY, []);
+export const getDocuments = (): any[] => getStorageItem<any[]>(DOCS_KEY, []);
+export const getPolls = (): any[] => getStorageItem<any[]>(POLLS_KEY, []);
+export const getAuditLogs = (): any[] => getStorageItem<any[]>(AUDIT_LOGS_KEY, []);
 
-export const getCurrentUser = (): any | null => {
-  return getStorageItem<any | null>(CURRENT_USER_KEY, null);
-};
-
-export const setCurrentUser = (user: any | null): void => {
-  setStorageItem(CURRENT_USER_KEY, user);
-};
-
-export const getQuickLinks = (): any[] => {
-  return getStorageItem<any[]>(LINKS_KEY, []);
-};
-
-export const getAnnouncements = (): any[] => {
-  return getStorageItem<any[]>(ANNOUNCEMENTS_KEY, []);
-};
-
-export const getTickets = (): any[] => {
-  return getStorageItem<any[]>(TICKETS_KEY, []);
-};
-
-export const getDocuments = (): any[] => {
-  return getStorageItem<any[]>(DOCS_KEY, []);
-};
-
-export const getPolls = (): any[] => {
-  return getStorageItem<any[]>(POLLS_KEY, []);
-};
-
-export const getAuditLogs = (): any[] => {
-  return getStorageItem<any[]>(AUDIT_LOGS_KEY, []);
-};
+// Adicionado: Stub essencial para o Dashboard e Calendário
+export const getCalendarEvents = (): any[] => getStorageItem<any[]>(CALENDAR_KEY, []);
 
 export const getUserFavorites = (userId: string): string[] => {
   const allFavorites = getStorageItem<Record<string, string[]>>(FAVORITES_KEY, {});
@@ -89,3 +67,4 @@ export const addAuditLog = (user: any, action: string, details: string): void =>
   };
   setStorageItem(AUDIT_LOGS_KEY, [newLog, ...logs]);
 };
+
