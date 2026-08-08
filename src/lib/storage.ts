@@ -50,6 +50,55 @@ export const saveUserFavorites = (userId: string, favorites: string[]): void => 
 };
 
 // ==========================================
+// AÇÕES DE ESCRITA E EXCLUSÃO DO LEGADO (STUBS)
+// ==========================================
+
+export const saveAnnouncement = (announcement: any): void => {
+  const items = getAnnouncements();
+  setStorageItem(ANNOUNCEMENTS_KEY, [announcement, ...items]);
+};
+
+export const deleteAnnouncement = (id: string): void => {
+  const items = getAnnouncements();
+  setStorageItem(ANNOUNCEMENTS_KEY, items.filter(i => i.id !== id));
+};
+
+export const saveTicket = (ticket: any): void => {
+  const items = getTickets();
+  setStorageItem(TICKETS_KEY, [ticket, ...items]);
+};
+
+export const saveQuickLink = (link: any): void => {
+  const items = getQuickLinks();
+  setStorageItem(LINKS_KEY, [link, ...items]);
+};
+
+export const deleteQuickLink = (id: string): void => {
+  const items = getQuickLinks();
+  setStorageItem(LINKS_KEY, items.filter(i => i.id !== id));
+};
+
+export const saveDocument = (doc: any): void => {
+  const items = getDocuments();
+  setStorageItem(DOCS_KEY, [doc, ...items]);
+};
+
+export const deleteDocument = (id: string): void => {
+  const items = getDocuments();
+  setStorageItem(DOCS_KEY, items.filter(i => i.id !== id));
+};
+
+export const savePoll = (poll: any): void => {
+  const items = getPolls();
+  setStorageItem(POLLS_KEY, [poll, ...items]);
+};
+
+export const saveCalendarEvent = (event: any): void => {
+  const items = getCalendarEvents();
+  setStorageItem(CALENDAR_KEY, [event, ...items]);
+};
+
+// ==========================================
 // INTERAÇÕES REQUERIDAS PELO DASHBOARD
 // ==========================================
 
@@ -85,4 +134,5 @@ export const addAuditLog = (user: any, action: string, details: string): void =>
   };
   setStorageItem(AUDIT_LOGS_KEY, [newLog, ...logs]);
 };
+
 
