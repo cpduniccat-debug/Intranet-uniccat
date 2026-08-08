@@ -98,6 +98,12 @@ export const saveCalendarEvent = (event: any): void => {
   setStorageItem(CALENDAR_KEY, [event, ...items]);
 };
 
+// Adicionado para satisfazer a View de Calendário Corporativo
+export const deleteCalendarEvent = (id: string): void => {
+  const items = getCalendarEvents();
+  setStorageItem(CALENDAR_KEY, items.filter(i => i.id !== id));
+};
+
 // ==========================================
 // INTERAÇÕES REQUERIDAS PELAS VIEWS DE CONTEÚDO
 // ==========================================
@@ -110,7 +116,6 @@ export const toggleUserFavorite = (userId: string, itemId: string): string[] => 
   return updated;
 };
 
-// Adicionado para satisfazer a Central de Documentos
 export const confirmDocumentRead = (documentId: string, userId: string): void => {
   console.log(`Documento lido: ${documentId} por ${userId}`);
 };
@@ -123,7 +128,6 @@ export const votePoll = (pollId: string, optionId: string, userId: string): void
   console.log(`Voto registrado na enquete ${pollId}, opção ${optionId} por ${userId}`);
 };
 
-// Outros stubs preventivos de ações secundárias
 export const addTicketMessage = (ticketId: string, message: any): void => {
   console.log(`Mensagem no chamado ${ticketId}`, message);
 };
@@ -148,5 +152,6 @@ export const addAuditLog = (user: any, action: string, details: string): void =>
   };
   setStorageItem(AUDIT_LOGS_KEY, [newLog, ...logs]);
 };
+
 
 
